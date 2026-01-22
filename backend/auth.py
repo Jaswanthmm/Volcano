@@ -80,16 +80,27 @@ def register_boardroom():
     if not company_name or not email or not password:
         return jsonify({"error": "Company name, email, and password are required"}), 400
 
+    # Domain Validation
+    domain = email.split('@')[-1].lower()
+    BLACKLISTED_DOMAINS = ['gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com', 'icloud.com', 'aol.com', 'protonmail.com']
+    
+    if domain in BLACKLISTED_DOMAINS:
+        return jsonify({"error": "Public email domains are not strictly authorized for Boardroom access. Please use corporate credentials."}), 403
+
     if Company.query.filter_by(email=email).first():
         return jsonify({"error": "Email already registered"}), 409
     
     if Company.query.filter_by(company_name=company_name).first():
         return jsonify({"error": "Company name already registered"}), 409
 
+    # Auto-fetch Logo
+    logo_url = f"https://www.google.com/s2/favicons?domain={domain}&sz=128"
+
     new_company = Company(
         company_name=company_name,
         email=email,
-        password_hash=generate_password_hash(password)
+        password_hash=generate_password_hash(password),
+        logo_url=logo_url
     )
 
     db.session.add(new_company)
@@ -99,6 +110,7 @@ def register_boardroom():
         "message": "Boardroom entity registered successfully",
         "company_name": company_name,
         "id": new_company.id,
+        "logo_url": logo_url,
         "role": "titan"
     }), 201
 
@@ -119,6 +131,7 @@ def login_boardroom():
             "company_name": company.company_name,
             "id": company.id,
             "email": company.email,
+            "logo_url": company.logo_url,
             "role": "titan"
         }), 200
     

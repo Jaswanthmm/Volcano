@@ -17,6 +17,7 @@ class Company(db.Model):
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(128))
     is_verified = db.Column(db.Boolean, default=False)
+    logo_url = db.Column(db.String(500)) # URL to company logo
     # ideas_received = db.relationship('Idea', backref='target_company', lazy=True)
 
 class Idea(db.Model):

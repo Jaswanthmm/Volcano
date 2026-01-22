@@ -103,11 +103,15 @@ const BoardroomDashboard = () => {
         <div className="min-h-screen bg-[#050b14] text-white font-sans selection:bg-blue-500 selection:text-white overflow-hidden flex flex-col relative">
 
             {/* Top Navigation Bar */}
-            <div className="h-16 border-b border-white/5 bg-white/5 backdrop-blur-md flex items-center justify-between px-6 z-20">
+            <div className="w-full h-16 border-b border-white/5 bg-white/5 backdrop-blur-md flex items-center justify-between px-6 z-20">
                 <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shadow-lg shadow-blue-900/50">
-                        <Box size={18} />
-                    </div>
+                    {company?.logo_url ? (
+                        <img src={company.logo_url} alt="Logo" className="w-8 h-8 rounded-lg shadow-lg shadow-blue-900/50 object-contain bg-white/5" />
+                    ) : (
+                        <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shadow-lg shadow-blue-900/50">
+                            <Box size={18} />
+                        </div>
+                    )}
                     <div>
                         <h1 className="font-bold text-sm tracking-wide">{company?.company_name}</h1>
                         <p className="text-[10px] text-blue-400 uppercase tracking-widest">Boardroom Access</p>
@@ -395,7 +399,6 @@ const BoardroomDashboard = () => {
                     </div>
                 </div>
             )}
-
         </div>
     );
 };

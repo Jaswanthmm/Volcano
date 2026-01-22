@@ -19,6 +19,16 @@ const BoardroomLogin = () => {
         setLoading(true);
         setError('');
 
+        if (!isLogin) {
+            const domain = formData.email.split('@')[1];
+            const blockedDomains = ['gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com', 'icloud.com'];
+            if (blockedDomains.includes(domain)) {
+                setError("Corporate domain required. Public email providers are not authorized.");
+                setLoading(false);
+                return;
+            }
+        }
+
         const endpoint = isLogin ? '/api/auth/boardroom/login' : '/api/auth/boardroom/register';
 
         try {
