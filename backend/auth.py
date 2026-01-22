@@ -1,0 +1,125 @@
+from flask import Blueprint, request, jsonify
+from werkzeug.security import generate_password_hash, check_password_hash
+from models import db, User, Company
+import random
+import string
+
+auth_bp = Blueprint('auth', __name__, url_prefix='/api/auth')
+
+# --- Helper Functions ---
+def generate_alien_id():
+    """Generates a random Alien ID like 'ALIEN-X7Z9'"""
+    suffix = ''.join(random.choices(string.ascii_uppercase + string.digits, k=4))
+    return f"ALIEN-{suffix}"
+
+# --- Alien Routes ---
+
+@auth_bp.route('/alien/register', methods=['POST'])
+def register_alien():
+    data = request.get_json()
+    email = data.get('email')
+    password = data.get('password')
+
+    if not email or not password:
+        return jsonify({"error": "Email and password are required"}), 400
+
+    if User.query.filter_by(email=email).first():
+        return jsonify({"error": "Email already registered"}), 409
+
+    # Generate unique Alien ID
+    alien_id = generate_alien_id()
+    while User.query.filter_by(username=alien_id).first():
+        alien_id = generate_alien_id()
+
+    new_alien = User(
+        username=alien_id,
+        email=email,
+        password_hash=generate_password_hash(password)
+    )
+
+    db.session.add(new_alien)
+    db.session.commit()
+
+    return jsonify({
+        "message": "Alien registered successfully",
+        "alien_id": alien_id,
+        "role": "alien"
+    }), 201
+
+@auth_bp.route('/alien/login', methods=['POST'])
+def login_alien():
+    data = request.get_json()
+    identifier = data.get('identifier') # Can be email or Alien ID
+    password = data.get('password')
+
+    if not identifier or not password:
+        return jsonify({"error": "Identifier and password are required"}), 400
+
+    # Try to find user by email or username (Alien ID)
+    alien = User.query.filter((User.email == identifier) | (User.username == identifier)).first()
+
+    if alien and check_password_hash(alien.password_hash, password):
+        return jsonify({
+            "message": "Login successful",
+            "alien_id": alien.username,
+            "email": alien.email,
+            "role": "alien"
+        }), 200
+    
+    return jsonify({"error": "Invalid credentials"}), 401
+
+# --- Boardroom Routes ---
+
+@auth_bp.route('/boardroom/register', methods=['POST'])
+def register_boardroom():
+    data = request.get_json()
+    company_name = data.get('company_name')
+    email = data.get('email')
+    password = data.get('password')
+
+    if not company_name or not email or not password:
+        return jsonify({"error": "Company name, email, and password are required"}), 400
+
+    if Company.query.filter_by(email=email).first():
+        return jsonify({"error": "Email already registered"}), 409
+    
+    if Company.query.filter_by(company_name=company_name).first():
+        return jsonify({"error": "Company name already registered"}), 409
+
+    new_company = Company(
+        company_name=company_name,
+        email=email,
+        password_hash=generate_password_hash(password)
+    )
+
+    db.session.add(new_company)
+    db.session.commit()
+
+    return jsonify({
+        "message": "Boardroom entity registered successfully",
+        "company_name": company_name,
+        "id": new_company.id,
+        "role": "titan"
+    }), 201
+
+@auth_bp.route('/boardroom/login', methods=['POST'])
+def login_boardroom():
+    data = request.get_json()
+    email = data.get('email')
+    password = data.get('password')
+
+    if not email or not password:
+        return jsonify({"error": "Email and password are required"}), 400
+
+    company = Company.query.filter_by(email=email).first()
+
+    if company and check_password_hash(company.password_hash, password):
+        return jsonify({
+            "message": "Boardroom access granted",
+            "company_name": company.company_name,
+            "id": company.id,
+            "email": company.email,
+            "role": "titan"
+        }), 200
+    
+    return jsonify({"error": "Invalid credentials"}), 401
