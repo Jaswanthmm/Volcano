@@ -3,6 +3,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from models import db, User, Company
 import random
 import string
+from urllib.parse import urlparse
 
 auth_bp = Blueprint('auth', __name__, url_prefix='/api/auth')
 
@@ -14,14 +15,16 @@ def generate_alien_id():
 
 # --- Alien Routes ---
 
-@auth_bp.route('/alien/register', methods=['POST'])
+@auth_bp.route('/alien/register', methods=['POST'], strict_slashes=False)
 def register_alien():
+    print(f"DEBUG: Hit register_alien with data: {request.get_json()}", flush=True)
     data = request.get_json()
     email = data.get('email')
     password = data.get('password')
+    name = data.get('name') # Optional but requested
 
-    if not email or not password:
-        return jsonify({"error": "Email and password are required"}), 400
+    if not email or not password or not name:
+        return jsonify({"error": "Email, password, and name are required"}), 400
 
     if User.query.filter_by(email=email).first():
         return jsonify({"error": "Email already registered"}), 409
@@ -34,6 +37,7 @@ def register_alien():
     new_alien = User(
         username=alien_id,
         email=email,
+        name=name,
         password_hash=generate_password_hash(password)
     )
 
@@ -43,6 +47,7 @@ def register_alien():
     return jsonify({
         "message": "Alien registered successfully",
         "alien_id": alien_id,
+        "name": name,
         "role": "alien"
     }), 201
 
@@ -76,15 +81,16 @@ def register_boardroom():
     company_name = data.get('company_name')
     email = data.get('email')
     password = data.get('password')
+    website_url = data.get('website_url')
 
-    if not company_name or not email or not password:
-        return jsonify({"error": "Company name, email, and password are required"}), 400
+    if not company_name or not email or not password or not website_url:
+        return jsonify({"error": "Company name, email, password, and website URL are required"}), 400
 
-    # Domain Validation
-    domain = email.split('@')[-1].lower()
+    # Domain Validation (Email)
+    email_domain = email.split('@')[-1].lower()
     BLACKLISTED_DOMAINS = ['gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com', 'icloud.com', 'aol.com', 'protonmail.com']
     
-    if domain in BLACKLISTED_DOMAINS:
+    if email_domain in BLACKLISTED_DOMAINS:
         return jsonify({"error": "Public email domains are not strictly authorized for Boardroom access. Please use corporate credentials."}), 403
 
     if Company.query.filter_by(email=email).first():
@@ -93,14 +99,26 @@ def register_boardroom():
     if Company.query.filter_by(company_name=company_name).first():
         return jsonify({"error": "Company name already registered"}), 409
 
-    # Auto-fetch Logo
+    if Company.query.filter_by(website_url=website_url).first():
+        return jsonify({"error": "Company website already verified in our database"}), 409
+
+    # Auto-fetch Logo using Website URL
+    try:
+        parsed_url = urlparse(website_url)
+        domain = parsed_url.netloc or parsed_url.path # handle cases like 'stripe.com' vs 'https://stripe.com'
+        if domain.startswith('www.'):
+            domain = domain[4:]
+    except:
+        domain = website_url # Fallback
+
     logo_url = f"https://www.google.com/s2/favicons?domain={domain}&sz=128"
 
     new_company = Company(
         company_name=company_name,
         email=email,
         password_hash=generate_password_hash(password),
-        logo_url=logo_url
+        logo_url=logo_url,
+        website_url=website_url
     )
 
     db.session.add(new_company)
@@ -132,6 +150,7 @@ def login_boardroom():
             "id": company.id,
             "email": company.email,
             "logo_url": company.logo_url,
+            "website_url": company.website_url,
             "role": "titan"
         }), 200
     

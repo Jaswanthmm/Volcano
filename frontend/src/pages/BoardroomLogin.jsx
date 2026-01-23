@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Box, Lock, ArrowRight, Shield, Building, AlertCircle } from 'lucide-react';
+import { Box, Lock, ArrowRight, Shield, Building, AlertCircle, Eye, EyeOff } from 'lucide-react';
 
 const BoardroomLogin = () => {
     const [isLogin, setIsLogin] = useState(true);
-    const [formData, setFormData] = useState({ company_name: '', email: '', password: '' });
+    const [formData, setFormData] = useState({ company_name: '', email: '', password: '', website_url: '' });
+    const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
@@ -27,12 +28,17 @@ const BoardroomLogin = () => {
                 setLoading(false);
                 return;
             }
+            if (!formData.website_url.includes('.')) { // Basic validation
+                setError("Please enter a valid company website URL.");
+                setLoading(false);
+                return;
+            }
         }
 
         const endpoint = isLogin ? '/api/auth/boardroom/login' : '/api/auth/boardroom/register';
 
         try {
-            const response = await fetch(`http://127.0.0.1:5000${endpoint}`, {
+            const response = await fetch(`${endpoint}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(formData),
@@ -52,7 +58,8 @@ const BoardroomLogin = () => {
             } else {
                 alert('Organization Registered. Please confirm credentials to access Boardroom.');
                 setIsLogin(true);
-                setFormData({ ...formData, password: '' });
+                setIsLogin(true);
+                setFormData({ company_name: '', email: '', password: '', website_url: '' });
             }
 
         } catch (err) {
@@ -101,24 +108,45 @@ const BoardroomLogin = () => {
                         </div>
                     )}
 
-                    <form className="space-y-6" onSubmit={handleSubmit}>
+                    <form className="space-y-6" onSubmit={handleSubmit} autoComplete="off">
                         {!isLogin && (
-                            <div className="space-y-2">
-                                <label className="text-[10px] uppercase tracking-widest text-blue-200/50 font-bold ml-1">Company Name</label>
-                                <div className="relative group">
-                                    <input
-                                        type="text"
-                                        name="company_name"
-                                        value={formData.company_name}
-                                        onChange={handleChange}
-                                        className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500/50 focus:bg-blue-900/10 transition-all placeholder-white/20 text-sm"
-                                        placeholder="Volcano Industries"
-                                    />
-                                    <div className="absolute right-4 top-3.5 text-white/20 group-focus-within:text-blue-400 transition-colors">
-                                        <Building size={18} />
+                            <>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] uppercase tracking-widest text-blue-200/50 font-bold ml-1">Company Name</label>
+                                    <div className="relative group">
+                                        <input
+                                            type="text"
+                                            name="company_name"
+                                            value={formData.company_name}
+                                            onChange={handleChange}
+                                            className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500/50 focus:bg-blue-900/10 transition-all placeholder-white/20 text-sm"
+                                            placeholder="Volcano Industries"
+                                            autoComplete="off"
+                                        />
+                                        <div className="absolute right-4 top-3.5 text-white/20 group-focus-within:text-blue-400 transition-colors">
+                                            <Building size={18} />
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
+
+                                <div className="space-y-2">
+                                    <label className="text-[10px] uppercase tracking-widest text-blue-200/50 font-bold ml-1">Company Website</label>
+                                    <div className="relative group">
+                                        <input
+                                            type="text"
+                                            name="website_url"
+                                            value={formData.website_url}
+                                            onChange={handleChange}
+                                            className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500/50 focus:bg-blue-900/10 transition-all placeholder-white/20 text-sm"
+                                            placeholder="https://example.com"
+                                            autoComplete="off"
+                                        />
+                                        <div className="absolute right-4 top-3.5 text-white/20 group-focus-within:text-blue-400 transition-colors">
+                                            <div className="text-[10px] font-bold text-blue-500">WWW</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </>
                         )}
 
                         <div className="space-y-2">
@@ -131,6 +159,7 @@ const BoardroomLogin = () => {
                                     onChange={handleChange}
                                     className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500/50 focus:bg-blue-900/10 transition-all placeholder-white/20 text-sm"
                                     placeholder="executive@corp.com"
+                                    autoComplete="off"
                                 />
                                 <div className="absolute right-4 top-3.5 text-white/20 group-focus-within:text-blue-400 transition-colors">
                                     <Shield size={18} />
@@ -145,15 +174,19 @@ const BoardroomLogin = () => {
                             </div>
                             <div className="relative group">
                                 <input
-                                    type="password"
+                                    type={showPassword ? "text" : "password"}
                                     name="password"
                                     value={formData.password}
                                     onChange={handleChange}
                                     className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500/50 focus:bg-blue-900/10 transition-all placeholder-white/20 text-sm"
                                     placeholder="••••••••••••"
+                                    autoComplete="new-password"
                                 />
-                                <div className="absolute right-4 top-3.5 text-white/20 group-focus-within:text-blue-400 transition-colors">
-                                    <Lock size={18} />
+                                <div
+                                    className="absolute right-4 top-3.5 text-white/20 group-focus-within:text-blue-400 transition-colors cursor-pointer hover:text-white"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                >
+                                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                                 </div>
                             </div>
                         </div>

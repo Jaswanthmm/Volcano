@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { User, Lock, ArrowRight, Shield, AlertCircle } from 'lucide-react';
+import { User, Lock, ArrowRight, Shield, AlertCircle, Eye, EyeOff } from 'lucide-react';
 
 const AlienLogin = () => {
     const [isLogin, setIsLogin] = useState(true);
-    const [formData, setFormData] = useState({ email: '', password: '', identifier: '' });
+    const [formData, setFormData] = useState({ email: '', password: '', identifier: '', name: '' });
+    const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState('');
     const [successMsg, setSuccessMsg] = useState('');
     const [loading, setLoading] = useState(false);
@@ -24,16 +25,26 @@ const AlienLogin = () => {
         const endpoint = isLogin ? '/api/auth/alien/login' : '/api/auth/alien/register';
         const payload = isLogin
             ? { identifier: formData.identifier, password: formData.password }
-            : { email: formData.email, password: formData.password };
+            : { email: formData.email, password: formData.password, name: formData.name };
 
         try {
-            const response = await fetch(`http://127.0.0.1:5000${endpoint}`, {
+            const response = await fetch(`${endpoint}`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
                 body: JSON.stringify(payload),
             });
 
-            const data = await response.json();
+            const text = await response.text();
+            let data;
+            try {
+                data = JSON.parse(text);
+            } catch (e) {
+                console.error("Failed to parse response:", text);
+                throw new Error(`Server returned invalid response: ${text.substring(0, 50)}...`);
+            }
 
             if (!response.ok) {
                 throw new Error(data.error || 'Transmission failed.');
@@ -47,7 +58,11 @@ const AlienLogin = () => {
             } else {
                 setSuccessMsg(`Uplink Established! Your Node Identifier is: ${data.alien_id}`);
                 setIsLogin(true);
-                setFormData({ ...formData, identifier: data.alien_id });
+                setSuccessMsg(`Uplink Established! Your Node Identifier is: ${data.alien_id}`);
+                setIsLogin(true);
+                setSuccessMsg(`Uplink Established! Your Node Identifier is: ${data.alien_id}`);
+                setIsLogin(true);
+                setFormData({ email: '', password: '', identifier: data.alien_id, name: '' });
             }
 
         } catch (err) {
@@ -105,8 +120,8 @@ const AlienLogin = () => {
                         </div>
                     )}
 
-                    <form className="relative z-10 space-y-6" onSubmit={handleSubmit}>
-                        {!isLogin && (
+                    <form className="relative z-10 space-y-6" onSubmit={handleSubmit} autoComplete="off">
+                        {!isLogin && (<>
                             <div className="space-y-2">
                                 <label className="text-[10px] uppercase tracking-widest text-green-500/50 font-bold block">Signal Frequency (Email)</label>
                                 <div className="relative group">
@@ -117,13 +132,33 @@ const AlienLogin = () => {
                                         onChange={handleChange}
                                         className="w-full bg-black/50 border border-green-500/30 rounded-lg px-4 py-3 text-green-400 focus:outline-none focus:border-green-400 transition-colors placeholder-green-900/50 text-sm"
                                         placeholder="entity@void.net"
+                                        autoComplete="new-password"
                                     />
                                     <div className="absolute right-3 top-3 text-green-500/20 group-focus-within:text-green-500/50 transition-colors">
                                         <Shield size={18} />
                                     </div>
                                 </div>
                             </div>
-                        )}
+
+                            <div className="space-y-2">
+                                <label className="text-[10px] uppercase tracking-widest text-green-500/50 font-bold block">Entity Name</label>
+                                <div className="relative group">
+                                    <input
+                                        type="text"
+                                        name="name"
+                                        required
+                                        value={formData.name}
+                                        onChange={handleChange}
+                                        className="w-full bg-black/50 border border-green-500/30 rounded-lg px-4 py-3 text-green-400 focus:outline-none focus:border-green-400 transition-colors placeholder-green-900/50 text-sm"
+                                        placeholder="Zorgon the Conqueror"
+                                        autoComplete="name"
+                                    />
+                                    <div className="absolute right-3 top-3 text-green-500/20 group-focus-within:text-green-500/50 transition-colors">
+                                        <User size={18} />
+                                    </div>
+                                </div>
+                            </div>
+                        </>)}
 
                         {isLogin && (
                             <div className="space-y-2">
@@ -136,6 +171,7 @@ const AlienLogin = () => {
                                         onChange={handleChange}
                                         className="w-full bg-black/50 border border-green-500/30 rounded-lg px-4 py-3 text-green-400 focus:outline-none focus:border-green-400 transition-colors placeholder-green-900/50 text-sm"
                                         placeholder="ALIEN-XXXX or Email"
+                                        autoComplete="off"
                                     />
                                     <div className="absolute right-3 top-3 text-green-500/20 group-focus-within:text-green-500/50 transition-colors">
                                         <User size={18} />
@@ -148,15 +184,19 @@ const AlienLogin = () => {
                             <label className="text-[10px] uppercase tracking-widest text-green-500/50 font-bold block">Access Key (Password)</label>
                             <div className="relative group">
                                 <input
-                                    type="password"
+                                    type={showPassword ? "text" : "password"}
                                     name="password"
                                     value={formData.password}
                                     onChange={handleChange}
                                     className="w-full bg-black/50 border border-green-500/30 rounded-lg px-4 py-3 text-green-400 focus:outline-none focus:border-green-400 transition-colors placeholder-green-900/50 text-sm"
                                     placeholder="••••••••"
+                                    autoComplete="new-password"
                                 />
-                                <div className="absolute right-3 top-3 text-green-500/20 group-focus-within:text-green-500/50 transition-colors">
-                                    <Lock size={18} />
+                                <div
+                                    className="absolute right-3 top-3 text-green-500/20 group-focus-within:text-green-500/50 transition-colors cursor-pointer hover:text-green-400"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                >
+                                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                                 </div>
                             </div>
                         </div>
@@ -187,8 +227,8 @@ const AlienLogin = () => {
                     Encrypted via Neural Exchange v3.1
                 </div>
 
-            </div>
-        </div>
+            </div >
+        </div >
     );
 };
 

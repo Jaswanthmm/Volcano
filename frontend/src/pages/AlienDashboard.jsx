@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Radio, Send, Database, Shield, LogOut, Loader2, AlertTriangle, CheckCircle2, User } from 'lucide-react';
+import { Radio, Send, Database, Shield, LogOut, Loader2, AlertTriangle, CheckCircle2, User, MessageSquare, XCircle, HelpCircle, Activity } from 'lucide-react';
 
 const AlienDashboard = () => {
     const navigate = useNavigate();
@@ -12,12 +12,63 @@ const AlienDashboard = () => {
     // Form State
     const [title, setTitle] = useState('');
     const [content, setContent] = useState('');
+    const [signalType, setSignalType] = useState('New Feature');
     const [selectedCompany, setSelectedCompany] = useState('');
     const [searchQuery, setSearchQuery] = useState('');
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const [submitStatus, setSubmitStatus] = useState(null); // 'sending', 'success', 'error'
     const [errorMessage, setErrorMessage] = useState('');
     const [currentView, setCurrentView] = useState('transmit'); // 'transmit' | 'archive'
+
+    // Chat State
+    const [showChatModal, setShowChatModal] = useState(false);
+    const [selectedSignalForChat, setSelectedSignalForChat] = useState(null);
+    const [chatMessages, setChatMessages] = useState([]);
+    const [newMessage, setNewMessage] = useState('');
+    const [sendingMsg, setSendingMsg] = useState(false);
+
+    const openChat = async (signal) => {
+        setSelectedSignalForChat(signal);
+        setShowChatModal(true);
+        try {
+            const res = await fetch(`/api/messages/${signal.id}`);
+            if (res.ok) {
+                setChatMessages(await res.json());
+            }
+        } catch (err) {
+            console.error(err);
+        }
+    };
+
+    const sendMessage = async () => {
+        if (!newMessage.trim() || !selectedSignalForChat) return;
+        setSendingMsg(true);
+        try {
+            const res = await fetch(`/api/messages/`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    idea_id: selectedSignalForChat.id,
+                    sender_type: 'alien',
+                    content: newMessage
+                })
+            });
+            if (res.ok) {
+                const msg = await res.json();
+                setChatMessages([...chatMessages, {
+                    id: msg.id,
+                    sender_type: 'alien',
+                    content: newMessage,
+                    created_at: msg.created_at
+                }]);
+                setNewMessage('');
+            }
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setSendingMsg(false);
+        }
+    };
 
     // Compute Badges (Gamification)
     const badges = React.useMemo(() => {
@@ -43,8 +94,8 @@ const AlienDashboard = () => {
 
         // 2. Fetch Data
         Promise.all([
-            fetch(`http://127.0.0.1:5000/api/ideas/my?identifier=${userData.alien_id}`),
-            fetch(`http://127.0.0.1:5000/api/ideas/companies`)
+            fetch(`/api/ideas/my?identifier=${userData.alien_id}`),
+            fetch(`/api/ideas/companies`)
         ])
             .then(async ([ideasRes, companiesRes]) => {
                 if (ideasRes.ok) setIdeas(await ideasRes.json());
@@ -65,12 +116,13 @@ const AlienDashboard = () => {
         setSubmitStatus('sending');
 
         try {
-            const response = await fetch('http://127.0.0.1:5000/api/ideas/submit', {
+            const response = await fetch('/api/ideas/submit', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     title,
                     content,
+                    signal_type: signalType,
                     sender_identifier: user.alien_id,
                     company_name: selectedCompany
                 }),
@@ -85,6 +137,7 @@ const AlienDashboard = () => {
                 id: newSignal.signal_id,
                 title,
                 content,
+                signal_type: signalType,
                 status: 'pending',
                 company_name: selectedCompany,
                 created_at: new Date().toISOString()
@@ -93,6 +146,7 @@ const AlienDashboard = () => {
             setSubmitStatus('success');
             setTitle('');
             setContent('');
+            setSignalType('New Feature');
             setSelectedCompany('');
             setSearchQuery('');
 
@@ -116,7 +170,9 @@ const AlienDashboard = () => {
     // Filter Logic
     const visibleIdeas = currentView === 'transmit'
         ? ideas.filter(i => i.status === 'pending')
-        : ideas.filter(i => i.status !== 'pending');
+        : currentView === 'active'
+            ? ideas.filter(i => i.status === 'interesting')
+            : ideas.filter(i => i.status === 'accepted' || i.status === 'rejected');
 
     return (
         <div className="min-h-screen bg-black text-green-500 font-mono relative selection:bg-green-900 selection:text-white">
@@ -145,6 +201,12 @@ const AlienDashboard = () => {
                         className={`px-4 py-3 rounded-lg cursor-pointer transition-colors text-xs tracking-widest flex items-center gap-3 font-bold ${currentView === 'transmit' ? 'bg-green-900/20 border border-green-500/30 text-green-400' : 'text-green-600 hover:text-green-400 hover:bg-white/5'}`}
                     >
                         <Send size={16} /> TRANSMIT
+                    </div>
+                    <div
+                        onClick={() => setCurrentView('active')}
+                        className={`px-4 py-3 rounded-lg cursor-pointer transition-colors text-xs tracking-widest flex items-center gap-3 font-bold ${currentView === 'active' ? 'bg-green-900/20 border border-green-500/30 text-green-400' : 'text-green-600 hover:text-green-400 hover:bg-white/5'}`}
+                    >
+                        <Activity size={16} /> ACTIVE LOGS
                     </div>
                     <div
                         onClick={() => setCurrentView('archive')}
@@ -183,7 +245,7 @@ const AlienDashboard = () => {
                 <header className="mb-12 border-b border-green-500/20 pb-6 flex justify-between items-end">
                     <div>
                         <h2 className="text-3xl font-black uppercase text-white tracking-widest mb-1">
-                            {currentView === 'transmit' ? 'Frequency Control' : 'Signal Archive'}
+                            {currentView === 'transmit' ? 'Frequency Control' : currentView === 'active' ? 'Active Uplinks' : 'Signal Archive'}
                         </h2>
                         <div className="flex items-center gap-4 mt-4">
                             {badges.length > 0 ? (
@@ -289,6 +351,28 @@ const AlienDashboard = () => {
                                     </div>
 
                                     <div>
+                                        <label className="block text-[10px] uppercase tracking-widest text-green-500/60 mb-2 font-bold">Signal Type</label>
+                                        <div className="flex gap-4 mb-8">
+                                            {['New Feature', 'Bug', 'Others'].map((type) => (
+                                                <label key={type} className="flex items-center gap-2 cursor-pointer group/type">
+                                                    <div className={`w-4 h-4 rounded-full border border-green-500/50 flex items-center justify-center ${signalType === type ? 'bg-green-500/20' : ''}`}>
+                                                        {signalType === type && <div className="w-2 h-2 rounded-full bg-green-500"></div>}
+                                                    </div>
+                                                    <input
+                                                        type="radio"
+                                                        name="signalType"
+                                                        value={type}
+                                                        checked={signalType === type}
+                                                        onChange={(e) => setSignalType(e.target.value)}
+                                                        className="hidden"
+                                                    />
+                                                    <span className={`text-xs font-mono font-bold ${signalType === type ? 'text-green-300' : 'text-green-500/50 group-hover/type:text-green-400'}`}>{type}</span>
+                                                </label>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    <div>
                                         <label className="block text-[10px] uppercase tracking-widest text-green-500/60 mb-2 font-bold">Data Payload</label>
                                         <textarea
                                             required
@@ -331,7 +415,7 @@ const AlienDashboard = () => {
                         <div className="bg-black/40 backdrop-blur-md border border-green-500/20 rounded-xl p-6 h-[calc(100vh-200px)] overflow-y-auto custom-scrollbar">
                             <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2 sticky top-0 bg-black/80 p-2 -mx-2 -mt-2 backdrop-blur z-10">
                                 <span className="w-1 h-6 bg-green-500/50 block"></span>
-                                {currentView === 'transmit' ? 'TRANSMISSION LOG' : 'SIGNAL ARCHIVE'}
+                                {currentView === 'transmit' ? 'TRANSMISSION LOG' : currentView === 'active' ? 'ACTIVE CHANNELS' : 'SIGNAL ARCHIVE'}
                             </h3>
 
                             <div className="space-y-4">
@@ -344,7 +428,10 @@ const AlienDashboard = () => {
                                     visibleIdeas.map(idea => (
                                         <div key={idea.id} className="p-4 bg-green-900/5 border border-green-500/10 rounded-lg hover:border-green-500/30 transition-all group">
                                             <div className="flex justify-between items-start mb-2">
-                                                <h4 className="font-bold text-green-400 text-sm group-hover:text-green-300">{idea.title}</h4>
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-[10px] bg-green-900/40 text-green-300 px-2 py-0.5 rounded border border-green-500/20">{idea.signal_type || 'Signal'}</span>
+                                                    <h4 className="font-bold text-green-400 text-sm group-hover:text-green-300">{idea.title}</h4>
+                                                </div>
                                                 <span className={`text-[10px] uppercase tracking-wider px-2 py-0.5 rounded border ${idea.status === 'pending' ? 'border-yellow-500/20 text-yellow-500/80' :
                                                     idea.status === 'accepted' ? 'border-blue-500/20 text-blue-400' :
                                                         'border-red-500/20 text-red-500'
@@ -366,6 +453,18 @@ const AlienDashboard = () => {
                                                     ))}
                                                 </div>
                                             )}
+                                            {(idea.status === 'interesting' || idea.status === 'accepted') ? (
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); openChat(idea); }}
+                                                    className="mt-3 w-full py-2 bg-green-500/10 hover:bg-green-500/20 border border-green-500/20 rounded text-[10px] font-bold text-green-400 flex items-center justify-center gap-2 transition-colors"
+                                                >
+                                                    <MessageSquare size={12} /> COMM LINK
+                                                </button>
+                                            ) : (
+                                                <div className="mt-3 w-full py-2 bg-white/5 border border-white/5 rounded text-[10px] text-white/20 text-center flex items-center justify-center gap-2 cursor-not-allowed">
+                                                    <Shield size={12} /> SECURE CHANNEL LOCKED
+                                                </div>
+                                            )}
                                         </div>
                                     ))
                                 )}
@@ -376,6 +475,86 @@ const AlienDashboard = () => {
                 </div>
 
             </div>
+            {/* --- ALIEN CHAT MODAL --- */}
+            {showChatModal && selectedSignalForChat && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm">
+                    <div className="bg-[#050b14] border border-green-500/30 w-full max-w-4xl rounded-xl shadow-2xl relative overflow-hidden flex h-[600px] font-mono">
+
+                        {/* Modal Close */}
+                        <button
+                            onClick={() => setShowChatModal(false)}
+                            className="absolute top-4 right-4 text-green-500/30 hover:text-green-500 transition-colors z-50"
+                        >
+                            <XCircle size={24} />
+                        </button>
+
+                        {/* Left: Context Summary */}
+                        <div className="w-1/3 bg-green-900/10 border-r border-green-500/20 p-8 flex flex-col">
+                            <h3 className="text-xs font-bold text-green-600 uppercase tracking-widest mb-4">Transmission Context</h3>
+                            <h2 className="text-xl font-bold text-green-400 mb-2 leading-tight">{selectedSignalForChat.title}</h2>
+                            <div className="flex items-center gap-2 text-green-500/50 text-[10px] uppercase tracking-widest mb-6">
+                                <Shield size={12} /> TO: {selectedSignalForChat.company_name}
+                            </div>
+                            <div className="flex-1 overflow-hidden relative">
+                                <div className="absolute inset-0 overflow-y-auto text-sm text-green-300/60 leading-relaxed pr-2 custom-scrollbar">
+                                    {selectedSignalForChat.content}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Right: Chat Interface */}
+                        <div className="flex-1 flex flex-col bg-black relative">
+                            {/* Chat Header */}
+                            <div className="p-4 border-b border-green-500/20 bg-green-900/5 flex items-center gap-3">
+                                <MessageSquare size={16} className="text-green-500" />
+                                <span className="text-xs font-bold text-white uppercase tracking-widest">Secure Uplink: {selectedSignalForChat.company_name}</span>
+                            </div>
+
+                            {/* Messages List */}
+                            <div className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar">
+                                {chatMessages.length === 0 ? (
+                                    <div className="flex flex-col items-center justify-center h-full text-green-500/20">
+                                        <HelpCircle size={32} className="mb-2 opacity-50" />
+                                        <p className="text-xs uppercase tracking-widest">No transmissions yet</p>
+                                    </div>
+                                ) : (
+                                    chatMessages.map((msg) => (
+                                        <div key={msg.id} className={`flex flex-col ${msg.sender_type === 'alien' ? 'items-end' : 'items-start'}`}>
+                                            <div className={`max-w-[80%] p-3 rounded-lg text-sm ${msg.sender_type === 'alien' ? 'bg-green-900/20 border border-green-500/30 text-green-100 rounded-tr-none' : 'bg-white/5 border border-white/10 text-gray-300 rounded-tl-none'}`}>
+                                                {msg.content}
+                                            </div>
+                                            <span className="text-[9px] text-green-500/30 mt-1 uppercase tracking-wider">
+                                                {msg.sender_type === 'alien' ? 'You' : 'Boardroom'} • {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                            </span>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+
+                            {/* Input Area */}
+                            <div className="p-4 border-t border-green-500/20 bg-green-900/5">
+                                <div className="flex items-center gap-2">
+                                    <input
+                                        type="text"
+                                        value={newMessage}
+                                        onChange={(e) => setNewMessage(e.target.value)}
+                                        onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
+                                        placeholder="Type your response..."
+                                        className="flex-1 bg-black/40 border border-green-500/20 rounded-lg px-4 py-3 text-sm text-green-300 focus:outline-none focus:border-green-500/50 transition-all placeholder-green-800"
+                                    />
+                                    <button
+                                        onClick={sendMessage}
+                                        disabled={sendingMsg || !newMessage.trim()}
+                                        className="p-3 rounded-lg bg-green-600/20 hover:bg-green-600/40 border border-green-500/50 text-green-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                    >
+                                        {sendingMsg ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

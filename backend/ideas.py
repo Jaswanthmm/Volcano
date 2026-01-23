@@ -9,8 +9,10 @@ def submit_idea():
     data = request.get_json()
     title = data.get('title')
     content = data.get('content')
+    content = data.get('content')
     sender_identifier = data.get('sender_identifier') # Alien ID or Email
     company_name = data.get('company_name')
+    signal_type = data.get('signal_type', 'others')
 
     if not title or not content or not sender_identifier or not company_name:
         return jsonify({"error": "Missing required fields"}), 400
@@ -35,6 +37,7 @@ def submit_idea():
         content=content,
         sender_id=sender.id,
         recipient_company_id=company.id,
+        signal_type=signal_type,
         potential_value=analysis['value'],
         tags=analysis['tags']
     )
@@ -46,6 +49,8 @@ def submit_idea():
         "message": "Signal transmitted successfully",
         "signal_id": new_idea.id,
         "status": "pending",
+        "status": "pending",
+        "signal_type": signal_type,
         "potential_value": analysis['value'],
         "tags": analysis['tags']
     }), 201
@@ -71,6 +76,7 @@ def get_my_ideas():
             "title": idea.title,
             "content": idea.content,
             "status": idea.status,
+            "signal_type": idea.signal_type,
             "company_name": company.company_name if company else "Unknown",
             "potential_value": idea.potential_value,
             "tags": idea.tags,
@@ -97,7 +103,9 @@ def get_company_ideas(company_id):
             "title": idea.title,
             "content": idea.content,
             "status": idea.status,
+            "signal_type": idea.signal_type,
             "sender_identifier": sender.username if sender else "Unknown Alien",
+            "sender_name": sender.name if sender and sender.name else "Unknown Entity",
             "created_at": idea.created_at.isoformat()
         })
     return jsonify(results), 200
@@ -105,9 +113,9 @@ def get_company_ideas(company_id):
 @ideas_bp.route('/<int:idea_id>/status', methods=['POST'])
 def update_idea_status(idea_id):
     data = request.get_json()
-    new_status = data.get('status') # accepted, rejected
+    new_status = data.get('status') # accepted, rejected, interesting
 
-    if new_status not in ['accepted', 'rejected']:
+    if new_status not in ['accepted', 'rejected', 'interesting']:
         return jsonify({"error": "Invalid status"}), 400
 
     idea = Idea.query.get(idea_id)

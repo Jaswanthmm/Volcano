@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Box, Activity, Shield, Users, Loader2, CheckCircle2, XCircle, Search, Clock, ChevronRight, User, Star, Zap } from 'lucide-react';
+import { Box, Activity, Shield, Users, Loader2, CheckCircle2, XCircle, Search, Clock, ChevronRight, User, Star, Zap, HelpCircle, Send, MessageSquare } from 'lucide-react';
 
 const BoardroomDashboard = () => {
     const navigate = useNavigate();
@@ -10,12 +10,62 @@ const BoardroomDashboard = () => {
     // View State
     const [activeTab, setActiveTab] = useState('feed'); // 'feed' | 'scout'
     const [showProfileModal, setShowProfileModal] = useState(false);
+    const [showChatModal, setShowChatModal] = useState(false);
 
     // Data State
     const [signals, setSignals] = useState([]);
     const [selectedSignal, setSelectedSignal] = useState(null);
     const [aliens, setAliens] = useState([]);
     const [selectedAlienProfile, setSelectedAlienProfile] = useState(null);
+
+    // Chat State
+    const [chatMessages, setChatMessages] = useState([]);
+    const [newMessage, setNewMessage] = useState('');
+    const [sendingMsg, setSendingMsg] = useState(false);
+
+    const openChat = async () => {
+        if (!selectedSignal) return;
+        setShowChatModal(true);
+        // Fetch messages
+        try {
+            const res = await fetch(`/api/messages/${selectedSignal.id}`);
+            if (res.ok) {
+                setChatMessages(await res.json());
+            }
+        } catch (err) {
+            console.error(err);
+        }
+    };
+
+    const sendMessage = async () => {
+        if (!newMessage.trim() || !selectedSignal) return;
+        setSendingMsg(true);
+        try {
+            const res = await fetch(`/api/messages/`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    idea_id: selectedSignal.id,
+                    sender_type: 'titan',
+                    content: newMessage
+                })
+            });
+            if (res.ok) {
+                const msg = await res.json();
+                setChatMessages([...chatMessages, {
+                    id: msg.id,
+                    sender_type: 'titan',
+                    content: newMessage,
+                    created_at: msg.created_at
+                }]);
+                setNewMessage('');
+            }
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setSendingMsg(false);
+        }
+    };
 
     useEffect(() => {
         const storedUser = localStorage.getItem('titan_user');
@@ -28,8 +78,8 @@ const BoardroomDashboard = () => {
 
         // Fetch Data Parallel
         Promise.all([
-            fetch(`http://127.0.0.1:5000/api/ideas/company/${companyData.id}`),
-            fetch(`http://127.0.0.1:5000/api/users/aliens`)
+            fetch(`/api/ideas/company/${companyData.id}`),
+            fetch(`/api/users/aliens`)
         ])
             .then(async ([signalsRes, aliensRes]) => {
                 if (signalsRes.ok) {
@@ -50,7 +100,7 @@ const BoardroomDashboard = () => {
         if (!selectedSignal) return;
 
         try {
-            const res = await fetch(`http://127.0.0.1:5000/api/ideas/${selectedSignal.id}/status`, {
+            const res = await fetch(`/api/ideas/${selectedSignal.id}/status`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ status })
@@ -61,7 +111,18 @@ const BoardroomDashboard = () => {
                     s.id === selectedSignal.id ? { ...s, status } : s
                 );
                 setSignals(updatedSignals);
-                setSelectedSignal({ ...selectedSignal, status });
+
+                // Determine if signal should disappear from current view
+                const shouldStayVisible =
+                    (activeTab === 'feed' && status === 'pending') ||
+                    (activeTab === 'active' && status === 'interesting') ||
+                    (activeTab === 'archive' && (status === 'accepted' || status === 'rejected'));
+
+                if (shouldStayVisible) {
+                    setSelectedSignal({ ...selectedSignal, status });
+                } else {
+                    setSelectedSignal(null);
+                }
             }
         } catch (err) {
             console.error("Failed to update status", err);
@@ -73,7 +134,7 @@ const BoardroomDashboard = () => {
             // Check if username is valid, if not (e.g. from Unknown in weird case), return
             if (!username) return;
 
-            const res = await fetch(`http://127.0.0.1:5000/api/users/alien/${username}`);
+            const res = await fetch(`/api/users/alien/${username}`);
             if (res.ok) {
                 const profile = await res.json();
                 setSelectedAlienProfile(profile);
@@ -114,7 +175,7 @@ const BoardroomDashboard = () => {
                     )}
                     <div>
                         <h1 className="font-bold text-sm tracking-wide">{company?.company_name}</h1>
-                        <p className="text-[10px] text-blue-400 uppercase tracking-widest">Boardroom Access</p>
+                        <p className="text-[10px] text-blue-400 uppercase tracking-widest">Boardroom</p>
                     </div>
                 </div>
 
@@ -133,10 +194,16 @@ const BoardroomDashboard = () => {
                             Archive
                         </button>
                         <button
+                            onClick={() => setActiveTab('active')}
+                            className={`px-4 py-1.5 rounded-md text-[10px] uppercase font-bold tracking-widest transition-all ${activeTab === 'active' ? 'bg-blue-600 text-white shadow-lg' : 'text-white/40 hover:text-white'}`}
+                        >
+                            Active
+                        </button>
+                        <button
                             onClick={() => setActiveTab('scout')}
                             className={`px-4 py-1.5 rounded-md text-[10px] uppercase font-bold tracking-widest transition-all ${activeTab === 'scout' ? 'bg-blue-600 text-white shadow-lg' : 'text-white/40 hover:text-white'}`}
                         >
-                            Talent Scout
+                            Aliens
                         </button>
                     </div>
 
@@ -152,17 +219,22 @@ const BoardroomDashboard = () => {
 
             <div className="flex flex-1 overflow-hidden">
 
-                {/* --- FEED & ARCHIVE VIEW --- */}
-                {(activeTab === 'feed' || activeTab === 'archive') && (
+                {/* --- FEED, ACTIVE & ARCHIVE VIEW --- */}
+                {(activeTab === 'feed' || activeTab === 'active' || activeTab === 'archive') && (
                     <>
                         {/* Sidebar */}
                         <div className="w-96 border-r border-white/5 bg-[#0a101f] flex flex-col">
                             <div className="p-4 border-b border-white/5 flex items-center justify-between">
                                 <h2 className="text-xs font-bold text-blue-400 uppercase tracking-widest flex items-center gap-2">
-                                    <Shield size={14} /> {activeTab === 'feed' ? 'Intelligence Feed' : 'Signal Archive'}
+                                    <Shield size={14} />
+                                    {activeTab === 'feed' ? 'Intelligence Feed' : activeTab === 'active' ? 'Active Signals' : 'Signal Archive'}
                                 </h2>
                                 <span className="bg-blue-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
-                                    {signals.filter(s => activeTab === 'feed' ? s.status === 'pending' : s.status !== 'pending').length}
+                                    {signals.filter(s =>
+                                        activeTab === 'feed' ? s.status === 'pending' :
+                                            activeTab === 'active' ? s.status === 'interesting' :
+                                                (s.status === 'accepted' || s.status === 'rejected')
+                                    ).length}
                                 </span>
                             </div>
 
@@ -175,7 +247,11 @@ const BoardroomDashboard = () => {
 
                             <div className="flex-1 overflow-y-auto custom-scrollbar">
                                 {signals
-                                    .filter(s => activeTab === 'feed' ? s.status === 'pending' : s.status !== 'pending')
+                                    .filter(s =>
+                                        activeTab === 'feed' ? s.status === 'pending' :
+                                            activeTab === 'active' ? s.status === 'interesting' :
+                                                (s.status === 'accepted' || s.status === 'rejected')
+                                    )
                                     .map(signal => (
                                         <div
                                             key={signal.id}
@@ -185,12 +261,13 @@ const BoardroomDashboard = () => {
                                             <div className="flex justify-between items-start mb-1">
                                                 <h3 className={`text-sm font-bold truncate ${selectedSignal?.id === signal.id ? 'text-white' : 'text-white/70 group-hover:text-white'}`}>{signal.title}</h3>
                                                 {signal.status === 'pending' && <div className="w-2 h-2 rounded-full bg-yellow-500 shadow-lg shadow-yellow-500/50"></div>}
+                                                {signal.status === 'interesting' && <Star size={12} className="text-purple-500 fill-purple-500" />}
                                                 {signal.status === 'accepted' && <CheckCircle2 size={12} className="text-blue-500" />}
                                                 {signal.status === 'rejected' && <XCircle size={12} className="text-red-500/50" />}
                                             </div>
                                             <p className="text-[11px] text-white/40 mb-2 truncate">{signal.content}</p>
                                             <div className="flex items-center justify-between text-[10px] text-white/20 uppercase tracking-wider">
-                                                <span>From: {signal.sender_identifier}</span>
+                                                <span>From: {signal.sender_name || signal.sender_identifier}</span>
                                                 <span>{new Date(signal.created_at).toLocaleDateString()}</span>
                                             </div>
                                         </div>
@@ -208,8 +285,9 @@ const BoardroomDashboard = () => {
                                             Received: {new Date(selectedSignal.created_at).toLocaleString()}
                                         </div>
                                         <div className={`px-3 py-1 rounded text-[10px] font-bold uppercase tracking-widest border ${selectedSignal.status === 'pending' ? 'border-yellow-500/30 text-yellow-500 bg-yellow-500/10' :
-                                            selectedSignal.status === 'accepted' ? 'border-blue-500/30 text-blue-400 bg-blue-500/10' :
-                                                'border-red-500/30 text-red-500 bg-red-500/10'
+                                            selectedSignal.status === 'interesting' ? 'border-purple-500/30 text-purple-400 bg-purple-500/10' :
+                                                selectedSignal.status === 'accepted' ? 'border-blue-500/30 text-blue-400 bg-blue-500/10' :
+                                                    'border-red-500/30 text-red-500 bg-red-500/10'
                                             }`}>
                                             Status: {selectedSignal.status}
                                         </div>
@@ -226,8 +304,8 @@ const BoardroomDashboard = () => {
                                                     {selectedSignal.sender_identifier[0].toUpperCase()}
                                                 </div>
                                                 <div className="text-left">
-                                                    <p className="text-sm font-bold text-white group-hover:text-blue-400 transition-colors">Source: {selectedSignal.sender_identifier}</p>
-                                                    <p className="text-[10px] text-white/40 uppercase tracking-widest group-hover:text-white/60">View Operative Dossier</p>
+                                                    <p className="text-sm font-bold text-white group-hover:text-blue-400 transition-colors">Source: {selectedSignal.sender_name || selectedSignal.sender_identifier}</p>
+                                                    <p className="text-[10px] text-white/40 uppercase tracking-widest group-hover:text-white/60">{selectedSignal.sender_identifier}</p>
                                                 </div>
                                             </button>
                                         </div>
@@ -240,19 +318,39 @@ const BoardroomDashboard = () => {
                                     </div>
 
                                     <div className="border-t border-white/10 bg-[#0a101f] p-6 flex items-center justify-end gap-4">
-                                        {selectedSignal.status === 'pending' && (
+                                        {(selectedSignal.status === 'pending' || selectedSignal.status === 'interesting') && (
                                             <>
+                                                {/* Active Signals Actions */}
+                                                {selectedSignal.status === 'interesting' && (
+                                                    <button
+                                                        onClick={openChat}
+                                                        className="px-6 py-3 rounded-xl border border-white/10 text-white/60 hover:text-white hover:bg-white/5 hover:border-white/20 transition-all text-xs font-bold uppercase tracking-widest flex items-center gap-2"
+                                                    >
+                                                        <MessageSquare size={16} /> Open Chat
+                                                    </button>
+                                                )}
+
+                                                {/* Feed Actions */}
+                                                {selectedSignal.status === 'pending' && (
+                                                    <button
+                                                        onClick={() => handleStatusUpdate('interesting')}
+                                                        className="px-6 py-3 rounded-xl border border-white/10 text-white/60 hover:text-purple-400 hover:bg-purple-500/10 hover:border-purple-500/50 transition-all text-xs font-bold uppercase tracking-widest flex items-center gap-2"
+                                                    >
+                                                        <Star size={16} /> Mark Interesting
+                                                    </button>
+                                                )}
+
                                                 <button
                                                     onClick={() => handleStatusUpdate('rejected')}
                                                     className="px-6 py-3 rounded-xl border border-white/10 text-white/60 hover:text-red-400 hover:bg-red-500/10 hover:border-red-500/50 transition-all text-xs font-bold uppercase tracking-widest flex items-center gap-2"
                                                 >
-                                                    <XCircle size={16} /> Discard Signal
+                                                    <XCircle size={16} /> Discard
                                                 </button>
                                                 <button
                                                     onClick={() => handleStatusUpdate('accepted')}
                                                     className="px-8 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-900/50 transition-all text-xs font-bold uppercase tracking-widest flex items-center gap-2 hover:scale-[1.02]"
                                                 >
-                                                    <CheckCircle2 size={16} /> Acquire Asset
+                                                    <CheckCircle2 size={16} /> Acquire
                                                 </button>
                                             </>
                                         )}
@@ -276,8 +374,8 @@ const BoardroomDashboard = () => {
                     <div className="flex-1 bg-[#050b14] overflow-y-auto p-8">
                         <div className="max-w-7xl mx-auto">
                             <div className="mb-10 text-center">
-                                <h2 className="text-3xl font-bold text-white mb-2">Talent Scout</h2>
-                                <p className="text-blue-400/50 text-xs uppercase tracking-widest">Global Operative Database</p>
+                                <h2 className="text-3xl font-bold text-white mb-2">Aliens in Town</h2>
+                                <p className="text-blue-400/50 text-xs uppercase tracking-widest">Highly Potential Aliens</p>
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
@@ -395,6 +493,87 @@ const BoardroomDashboard = () => {
                         {/* Modal Footer */}
                         <div className="p-4 border-t border-white/10 bg-black/20 text-center">
                             <p className="text-[10px] text-white/20 uppercase tracking-[0.2em]">End of Operative Record</p>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* --- INQUIRY CHAT MODAL --- */}
+            {showChatModal && selectedSignal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+                    <div className="bg-[#0a101f] border border-blue-500/30 w-full max-w-4xl rounded-2xl shadow-2xl relative overflow-hidden flex h-[600px]">
+
+                        {/* Modal Close */}
+                        <button
+                            onClick={() => setShowChatModal(false)}
+                            className="absolute top-4 right-4 text-white/30 hover:text-white transition-colors z-50"
+                        >
+                            <XCircle size={24} />
+                        </button>
+
+                        {/* Left: Context Summary */}
+                        <div className="w-1/3 bg-black/20 border-r border-white/5 p-8 flex flex-col">
+                            <h3 className="text-xs font-bold text-blue-400 uppercase tracking-widest mb-4">Signal Context</h3>
+                            <h2 className="text-xl font-bold text-white mb-2 leading-tight">{selectedSignal.title}</h2>
+                            <div className="flex items-center gap-2 text-white/40 text-[10px] uppercase tracking-widest mb-6">
+                                <User size={12} /> {selectedSignal.sender_identifier}
+                            </div>
+                            <div className="flex-1 overflow-hidden relative">
+                                <div className="absolute inset-0 overflow-y-auto text-sm text-white/60 leading-relaxed pr-2">
+                                    {selectedSignal.content}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Right: Chat Interface */}
+                        <div className="flex-1 flex flex-col bg-[#050b14] relative">
+                            {/* Chat Header */}
+                            <div className="p-4 border-b border-white/5 bg-white/5 flex items-center gap-3">
+                                <MessageSquare size={16} className="text-blue-400" />
+                                <span className="text-xs font-bold text-white uppercase tracking-widest">Secure Comms Channel</span>
+                            </div>
+
+                            {/* Messages List */}
+                            <div className="flex-1 overflow-y-auto p-6 space-y-4">
+                                {chatMessages.length === 0 ? (
+                                    <div className="flex flex-col items-center justify-center h-full text-white/20">
+                                        <HelpCircle size={32} className="mb-2 opacity-50" />
+                                        <p className="text-xs uppercase tracking-widest">No inquiries yet</p>
+                                    </div>
+                                ) : (
+                                    chatMessages.map((msg) => (
+                                        <div key={msg.id} className={`flex flex-col ${msg.sender_type === 'titan' ? 'items-end' : 'items-start'}`}>
+                                            <div className={`max-w-[80%] p-3 rounded-lg text-sm ${msg.sender_type === 'titan' ? 'bg-blue-600/20 border border-blue-500/30 text-blue-100 rounded-tr-none' : 'bg-white/10 border border-white/5 text-gray-200 rounded-tl-none'}`}>
+                                                {msg.content}
+                                            </div>
+                                            <span className="text-[9px] text-white/20 mt-1 uppercase tracking-wider">
+                                                {msg.sender_type === 'titan' ? 'Boardroom' : 'Alien'} • {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                            </span>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+
+                            {/* Input Area */}
+                            <div className="p-4 border-t border-white/5 bg-white/[0.02]">
+                                <div className="flex items-center gap-2">
+                                    <input
+                                        type="text"
+                                        value={newMessage}
+                                        onChange={(e) => setNewMessage(e.target.value)}
+                                        onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
+                                        placeholder="Type your inquiry..."
+                                        className="flex-1 bg-black/40 border border-white/10 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500/50 transition-all placeholder-white/20"
+                                    />
+                                    <button
+                                        onClick={sendMessage}
+                                        disabled={sendingMsg || !newMessage.trim()}
+                                        className="p-3 rounded-lg bg-blue-600 hover:bg-blue-500 text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                    >
+                                        {sendingMsg ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
