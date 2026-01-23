@@ -76,10 +76,15 @@ const AlienDashboard = () => {
         ideas.forEach(idea => {
             if (idea.status === 'accepted') {
                 const name = idea.company_name;
-                acceptedMap[name] = (acceptedMap[name] || 0) + 1;
+                // Use backend provided logo or a fallback if not present (though seeding ensures it)
+                const logo = idea.company_logo_url;
+                if (!acceptedMap[name]) {
+                    acceptedMap[name] = { name, logo, count: 0 };
+                }
+                acceptedMap[name].count += 1;
             }
         });
-        return Object.entries(acceptedMap).map(([name, count]) => ({ name, count }));
+        return Object.values(acceptedMap);
     }, [ideas]);
 
     useEffect(() => {
@@ -247,21 +252,35 @@ const AlienDashboard = () => {
                         <h2 className="text-3xl font-black uppercase text-white tracking-widest mb-1">
                             {currentView === 'transmit' ? 'Frequency Control' : currentView === 'active' ? 'Active Uplinks' : 'Signal Archive'}
                         </h2>
-                        <div className="flex items-center gap-4 mt-4">
+                        <div className="flex items-center gap-3 mt-4">
                             {badges.length > 0 ? (
                                 badges.map((badge, idx) => (
-                                    <div key={idx} className="flex items-center gap-2 bg-green-900/20 border border-green-500/30 px-3 py-1.5 rounded-full">
-                                        <div className="w-6 h-6 rounded-full bg-green-500/20 flex items-center justify-center text-[10px] font-bold text-white border border-green-500/50">
-                                            {badge.name[0]}
+                                    <div key={idx} className="relative group cursor-help">
+                                        <div className="w-10 h-10 rounded-full bg-white border border-green-500/50 p-0.5 overflow-hidden flex items-center justify-center">
+                                            {badge.logo ? (
+                                                <img src={badge.logo} alt={badge.name} className="w-full h-full rounded-full object-contain group-hover:opacity-100 transition-opacity" />
+                                            ) : (
+                                                <div className="w-full h-full rounded-full bg-green-500/20 flex items-center justify-center text-[10px] font-bold text-white">
+                                                    {badge.name[0]}
+                                                </div>
+                                            )}
                                         </div>
-                                        <div className="flex flex-col">
-                                            <span className="text-[9px] text-green-500/70 uppercase tracking-wider leading-none">ASSET</span>
-                                            <span className="text-xs font-bold text-green-300 leading-none">{badge.count}</span>
+
+                                        {/* Count Badge */}
+                                        {badge.count > 1 && (
+                                            <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-green-500 text-black text-[10px] font-bold flex items-center justify-center border-2 border-black z-10 shadow-[0_0_10px_rgba(34,197,94,0.5)]">
+                                                x{badge.count}
+                                            </div>
+                                        )}
+
+                                        {/* Tooltip */}
+                                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-black/90 border border-green-500/30 text-green-400 text-[10px] rounded opacity-0 group-hover:opacity-100 transition-all pointer-events-none whitespace-nowrap z-50 backdrop-blur-sm tracking-widest uppercase">
+                                            {badge.name} Asset
                                         </div>
                                     </div>
                                 ))
                             ) : (
-                                <p className="text-green-600 text-xs italic">No assets acquired yet.</p>
+                                <p className="text-green-600 text-xs italic tracking-widest opacity-50">NO ASSETS SECURED</p>
                             )}
                         </div>
                     </div>
@@ -447,9 +466,8 @@ const AlienDashboard = () => {
                                             </div>
                                             {idea.potential_value && (
                                                 <div className="mt-2 pt-2 border-t border-green-500/10 flex items-center gap-2">
-                                                    <span className="text-[10px] text-green-300/60 font-mono">EST. VAL: {idea.potential_value}</span>
-                                                    {idea.tags && (Array.isArray(idea.tags) ? idea.tags : idea.tags.split(',')).slice(0, 2).map((tag, i) => (
-                                                        <span key={i} className="text-[9px] px-1 bg-green-500/10 rounded text-green-500/50">{tag.trim()}</span>
+                                                    {idea.tags && (Array.isArray(idea.tags) ? idea.tags : idea.tags.split(',')).slice(0, 3).map((tag, i) => (
+                                                        <span key={i} className="text-[9px] px-1.5 py-0.5 bg-green-500/5 border border-green-500/10 rounded text-green-400/70 tracking-wider uppercase">{tag.trim()}</span>
                                                     ))}
                                                 </div>
                                             )}
@@ -555,6 +573,41 @@ const AlienDashboard = () => {
                     </div>
                 </div>
             )}
+        </div>
+    );
+};
+
+const CompanyBadge = ({ badge }) => {
+    const [imgError, setImgError] = React.useState(false);
+
+    return (
+        <div className="relative group cursor-help">
+            <div className={`w-10 h-10 rounded-full border border-green-500/50 p-0.5 overflow-hidden flex items-center justify-center ${imgError ? 'bg-green-900/20' : 'bg-white'}`}>
+                {badge.logo && !imgError ? (
+                    <img
+                        src={badge.logo}
+                        alt={badge.name}
+                        className="w-full h-full rounded-full object-contain group-hover:opacity-100 transition-opacity"
+                        onError={() => setImgError(true)}
+                    />
+                ) : (
+                    <div className="w-full h-full rounded-full bg-green-500/20 flex items-center justify-center text-[10px] font-bold text-white">
+                        {badge.name[0]}
+                    </div>
+                )}
+            </div>
+
+            {/* Count Badge */}
+            {badge.count > 1 && (
+                <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-green-500 text-black text-[10px] font-bold flex items-center justify-center border-2 border-black z-10 shadow-[0_0_10px_rgba(34,197,94,0.5)]">
+                    x{badge.count}
+                </div>
+            )}
+
+            {/* Tooltip */}
+            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-black/90 border border-green-500/30 text-green-400 text-[10px] rounded opacity-0 group-hover:opacity-100 transition-all pointer-events-none whitespace-nowrap z-50 backdrop-blur-sm tracking-widest uppercase">
+                {badge.name} Asset
+            </div>
         </div>
     );
 };

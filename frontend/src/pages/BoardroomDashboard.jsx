@@ -449,7 +449,7 @@ const BoardroomDashboard = () => {
                                 <div>
                                     <h2 className="text-3xl font-bold text-white mb-2">{selectedAlienProfile.username}</h2>
                                     <div className="flex items-center gap-3">
-                                        <span className="px-3 py-1 bg-green-500/10 text-green-400 border border-green-500/20 rounded-full text-[10px] uppercase font-bold tracking-widest">Verified Human</span>
+                                        <span className="px-3 py-1 bg-green-500/10 text-green-400 border border-green-500/20 rounded-full text-[10px] uppercase font-bold tracking-widest">Verified Alien</span>
                                     </div>
                                 </div>
                             </div>
@@ -463,26 +463,40 @@ const BoardroomDashboard = () => {
                                 <h3 className="text-[10px] font-bold text-white/40 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
                                     <Shield size={12} /> Corporate Assets
                                 </h3>
-                                <div className="flex flex-wrap gap-3">
+                                <div className="flex flex-wrap gap-3 items-center">
                                     {selectedAlienProfile.portfolio.length > 0 ? (
-                                        Object.values(selectedAlienProfile.portfolio.reduce((acc, item) => {
-                                            if (!acc[item.company_name]) acc[item.company_name] = { name: item.company_name, count: 0 };
-                                            acc[item.company_name].count += 1;
-                                            return acc;
-                                        }, {})).map((badge, idx) => (
-                                            <div key={idx} className="flex items-center gap-2 bg-blue-900/10 border border-blue-500/20 px-3 py-1.5 rounded-full">
-                                                <div className="w-6 h-6 rounded-full bg-blue-500/20 flex items-center justify-center text-[10px] font-bold text-blue-300 border border-blue-500/30">
-                                                    {badge.name[0]}
-                                                </div>
-                                                <div className="flex flex-col">
-                                                    <span className="text-[9px] text-blue-500/70 uppercase tracking-wider leading-none">ASSET</span>
-                                                    <span className="text-xs font-bold text-blue-300 leading-none">{badge.count}</span>
-                                                </div>
-                                                <span className="text-[10px] text-white/50 uppercase tracking-wider ml-1">{badge.name}</span>
-                                            </div>
-                                        ))
+                                        (() => {
+                                            // Aggregate assets
+                                            const assetsMap = selectedAlienProfile.portfolio.reduce((acc, item) => {
+                                                const name = item.company_name;
+                                                // Use backend provided logo
+                                                const logo = item.company_logo_url;
+                                                if (!acc[name]) acc[name] = { name, logo, count: 0 };
+                                                acc[name].count++;
+                                                return acc;
+                                            }, {});
+
+                                            const sortedAssets = Object.values(assetsMap).sort((a, b) => b.count - a.count);
+                                            const displayLimit = 4;
+                                            const visibleAssets = sortedAssets.slice(0, displayLimit);
+                                            const remaining = sortedAssets.length - displayLimit;
+
+                                            return (
+                                                <>
+                                                    {visibleAssets.map((asset, idx) => (
+                                                        <CompanyBadge key={idx} asset={asset} />
+                                                    ))}
+
+                                                    {remaining > 0 && (
+                                                        <div className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-xs font-bold text-white/50 hover:bg-white/10 hover:text-white transition-colors cursor-help" title={`${remaining} more assets`}>
+                                                            +{remaining}
+                                                        </div>
+                                                    )}
+                                                </>
+                                            );
+                                        })()
                                     ) : (
-                                        <span className="text-white/20 text-xs italic">No assets acquired.</span>
+                                        <span className="text-white/20 text-xs italic tracking-widest">No assets acquired.</span>
                                     )}
                                 </div>
                             </div>
@@ -496,88 +510,124 @@ const BoardroomDashboard = () => {
                         </div>
                     </div>
                 </div>
-            )}
+            )
+            }
 
             {/* --- INQUIRY CHAT MODAL --- */}
-            {showChatModal && selectedSignal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-                    <div className="bg-[#0a101f] border border-blue-500/30 w-full max-w-4xl rounded-2xl shadow-2xl relative overflow-hidden flex h-[600px]">
+            {
+                showChatModal && selectedSignal && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+                        <div className="bg-[#0a101f] border border-blue-500/30 w-full max-w-4xl rounded-2xl shadow-2xl relative overflow-hidden flex h-[600px]">
 
-                        {/* Modal Close */}
-                        <button
-                            onClick={() => setShowChatModal(false)}
-                            className="absolute top-4 right-4 text-white/30 hover:text-white transition-colors z-50"
-                        >
-                            <XCircle size={24} />
-                        </button>
+                            {/* Modal Close */}
+                            <button
+                                onClick={() => setShowChatModal(false)}
+                                className="absolute top-4 right-4 text-white/30 hover:text-white transition-colors z-50"
+                            >
+                                <XCircle size={24} />
+                            </button>
 
-                        {/* Left: Context Summary */}
-                        <div className="w-1/3 bg-black/20 border-r border-white/5 p-8 flex flex-col">
-                            <h3 className="text-xs font-bold text-blue-400 uppercase tracking-widest mb-4">Signal Context</h3>
-                            <h2 className="text-xl font-bold text-white mb-2 leading-tight">{selectedSignal.title}</h2>
-                            <div className="flex items-center gap-2 text-white/40 text-[10px] uppercase tracking-widest mb-6">
-                                <User size={12} /> {selectedSignal.sender_identifier}
-                            </div>
-                            <div className="flex-1 overflow-hidden relative">
-                                <div className="absolute inset-0 overflow-y-auto text-sm text-white/60 leading-relaxed pr-2">
-                                    {selectedSignal.content}
+                            {/* Left: Context Summary */}
+                            <div className="w-1/3 bg-black/20 border-r border-white/5 p-8 flex flex-col">
+                                <h3 className="text-xs font-bold text-blue-400 uppercase tracking-widest mb-4">Signal Context</h3>
+                                <h2 className="text-xl font-bold text-white mb-2 leading-tight">{selectedSignal.title}</h2>
+                                <div className="flex items-center gap-2 text-white/40 text-[10px] uppercase tracking-widest mb-6">
+                                    <User size={12} /> {selectedSignal.sender_identifier}
+                                </div>
+                                <div className="flex-1 overflow-hidden relative">
+                                    <div className="absolute inset-0 overflow-y-auto text-sm text-white/60 leading-relaxed pr-2">
+                                        {selectedSignal.content}
+                                    </div>
                                 </div>
                             </div>
-                        </div>
 
-                        {/* Right: Chat Interface */}
-                        <div className="flex-1 flex flex-col bg-[#050b14] relative">
-                            {/* Chat Header */}
-                            <div className="p-4 border-b border-white/5 bg-white/5 flex items-center gap-3">
-                                <MessageSquare size={16} className="text-blue-400" />
-                                <span className="text-xs font-bold text-white uppercase tracking-widest">Secure Comms Channel</span>
-                            </div>
+                            {/* Right: Chat Interface */}
+                            <div className="flex-1 flex flex-col bg-[#050b14] relative">
+                                {/* Chat Header */}
+                                <div className="p-4 border-b border-white/5 bg-white/5 flex items-center gap-3">
+                                    <MessageSquare size={16} className="text-blue-400" />
+                                    <span className="text-xs font-bold text-white uppercase tracking-widest">Secure Comms Channel</span>
+                                </div>
 
-                            {/* Messages List */}
-                            <div className="flex-1 overflow-y-auto p-6 space-y-4">
-                                {chatMessages.length === 0 ? (
-                                    <div className="flex flex-col items-center justify-center h-full text-white/20">
-                                        <HelpCircle size={32} className="mb-2 opacity-50" />
-                                        <p className="text-xs uppercase tracking-widest">No inquiries yet</p>
-                                    </div>
-                                ) : (
-                                    chatMessages.map((msg) => (
-                                        <div key={msg.id} className={`flex flex-col ${msg.sender_type === 'titan' ? 'items-end' : 'items-start'}`}>
-                                            <div className={`max-w-[80%] p-3 rounded-lg text-sm ${msg.sender_type === 'titan' ? 'bg-blue-600/20 border border-blue-500/30 text-blue-100 rounded-tr-none' : 'bg-white/10 border border-white/5 text-gray-200 rounded-tl-none'}`}>
-                                                {msg.content}
-                                            </div>
-                                            <span className="text-[9px] text-white/20 mt-1 uppercase tracking-wider">
-                                                {msg.sender_type === 'titan' ? 'Boardroom' : 'Alien'} • {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                            </span>
+                                {/* Messages List */}
+                                <div className="flex-1 overflow-y-auto p-6 space-y-4">
+                                    {chatMessages.length === 0 ? (
+                                        <div className="flex flex-col items-center justify-center h-full text-white/20">
+                                            <HelpCircle size={32} className="mb-2 opacity-50" />
+                                            <p className="text-xs uppercase tracking-widest">No inquiries yet</p>
                                         </div>
-                                    ))
-                                )}
-                            </div>
+                                    ) : (
+                                        chatMessages.map((msg) => (
+                                            <div key={msg.id} className={`flex flex-col ${msg.sender_type === 'titan' ? 'items-end' : 'items-start'}`}>
+                                                <div className={`max-w-[80%] p-3 rounded-lg text-sm ${msg.sender_type === 'titan' ? 'bg-blue-600/20 border border-blue-500/30 text-blue-100 rounded-tr-none' : 'bg-white/10 border border-white/5 text-gray-200 rounded-tl-none'}`}>
+                                                    {msg.content}
+                                                </div>
+                                                <span className="text-[9px] text-white/20 mt-1 uppercase tracking-wider">
+                                                    {msg.sender_type === 'titan' ? 'Boardroom' : 'Alien'} • {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                </span>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
 
-                            {/* Input Area */}
-                            <div className="p-4 border-t border-white/5 bg-white/[0.02]">
-                                <div className="flex items-center gap-2">
-                                    <input
-                                        type="text"
-                                        value={newMessage}
-                                        onChange={(e) => setNewMessage(e.target.value)}
-                                        onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
-                                        placeholder="Type your inquiry..."
-                                        className="flex-1 bg-black/40 border border-white/10 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500/50 transition-all placeholder-white/20"
-                                    />
-                                    <button
-                                        onClick={sendMessage}
-                                        disabled={sendingMsg || !newMessage.trim()}
-                                        className="p-3 rounded-lg bg-blue-600 hover:bg-blue-500 text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                                    >
-                                        {sendingMsg ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
-                                    </button>
+                                {/* Input Area */}
+                                <div className="p-4 border-t border-white/5 bg-white/[0.02]">
+                                    <div className="flex items-center gap-2">
+                                        <input
+                                            type="text"
+                                            value={newMessage}
+                                            onChange={(e) => setNewMessage(e.target.value)}
+                                            onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
+                                            placeholder="Type your inquiry..."
+                                            className="flex-1 bg-black/40 border border-white/10 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500/50 transition-all placeholder-white/20"
+                                        />
+                                        <button
+                                            onClick={sendMessage}
+                                            disabled={sendingMsg || !newMessage.trim()}
+                                            className="p-3 rounded-lg bg-blue-600 hover:bg-blue-500 text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                        >
+                                            {sendingMsg ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
+                )
+            }
+        </div >
+    );
+};
+
+const CompanyBadge = ({ asset }) => {
+    const [imgError, setImgError] = React.useState(false);
+
+    return (
+        <div className="relative group">
+            <div className={`w-12 h-12 rounded-full border border-blue-500/30 p-1 flex items-center justify-center overflow-hidden ${imgError ? 'bg-blue-900/20' : 'bg-white'}`}>
+                {asset.logo && !imgError ? (
+                    <img
+                        src={asset.logo}
+                        alt={asset.name}
+                        className="w-full h-full rounded-full object-contain group-hover:opacity-100 transition-opacity"
+                        onError={() => setImgError(true)}
+                    />
+                ) : (
+                    <span className="text-xs font-bold text-blue-300">{asset.name[0]}</span>
+                )}
+            </div>
+
+            {/* Count Badge */}
+            {asset.count > 1 && (
+                <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-blue-600 text-white text-[10px] font-bold flex items-center justify-center border-2 border-[#0a101f] shadow-lg">
+                    x{asset.count}
                 </div>
             )}
+
+            {/* Tooltip */}
+            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-black/90 border border-blue-500/30 text-blue-400 text-[10px] rounded opacity-0 group-hover:opacity-100 transition-all pointer-events-none whitespace-nowrap z-50 backdrop-blur-sm tracking-widest uppercase">
+                {asset.name}
+            </div>
         </div>
     );
 };

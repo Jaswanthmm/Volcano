@@ -57,6 +57,7 @@ def get_alien_profile(alien_username):
             "content": idea.content,
             "company_id": idea.recipient_company_id,
             "company_name": company.company_name if company else "Unknown Node",
+            "company_logo_url": company.logo_url if company else None,
             "created_at": idea.created_at.isoformat(),
             "potential_value": idea.potential_value,
             "tags": idea.tags

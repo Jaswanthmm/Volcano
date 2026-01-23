@@ -78,6 +78,7 @@ def get_my_ideas():
             "status": idea.status,
             "signal_type": idea.signal_type,
             "company_name": company.company_name if company else "Unknown",
+            "company_logo_url": company.logo_url if company else None,
             "potential_value": idea.potential_value,
             "tags": idea.tags,
             "created_at": idea.created_at.isoformat()
@@ -88,7 +89,7 @@ def get_my_ideas():
 @ideas_bp.route('/companies', methods=['GET'])
 def get_companies():
     companies = Company.query.all()
-    results = [{"id": c.id, "name": c.company_name} for c in companies]
+    results = [{"id": c.id, "name": c.company_name, "logo_url": c.logo_url} for c in companies]
     return jsonify(results), 200
 
 @ideas_bp.route('/company/<int:company_id>', methods=['GET'])
