@@ -116,9 +116,12 @@ const AlienDashboard = () => {
         navigate('/');
     };
 
+
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         setSubmitStatus('sending');
+        setErrorMessage('');
 
         try {
             const response = await fetch('/api/ideas/submit', {
@@ -133,13 +136,18 @@ const AlienDashboard = () => {
                 }),
             });
 
-            if (!response.ok) throw new Error('Transmission interrupted');
+            const data = await response.json();
+
+            if (!response.ok) {
+                // Determine if it was an AI filter blocking execution
+                const errorDetail = data.details || data.error || 'Transmission interrupted';
+                throw new Error(errorDetail);
+            }
 
             // Success Update
-            const newSignal = await response.json();
             // Optimistic update or refetch
             setIdeas([{
-                id: newSignal.signal_id,
+                id: data.signal_id,
                 title,
                 content,
                 signal_type: signalType,
@@ -159,6 +167,8 @@ const AlienDashboard = () => {
             setTimeout(() => setSubmitStatus(null), 3000);
 
         } catch (err) {
+            console.error("Submission error:", err);
+            setErrorMessage(err.message);
             setSubmitStatus('error');
         }
     };
@@ -411,7 +421,7 @@ const AlienDashboard = () => {
                                         )}
                                         {submitStatus === 'error' && (
                                             <span className="text-red-400 text-xs flex items-center gap-2">
-                                                <AlertTriangle size={14} /> ERROR IN UPLINK
+                                                <AlertTriangle size={14} /> {errorMessage ? errorMessage.toUpperCase() : 'ERROR IN UPLINK'}
                                             </span>
                                         )}
                                         <button

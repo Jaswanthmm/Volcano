@@ -17,20 +17,32 @@ def submit_idea():
     if not title or not content or not sender_identifier or not company_name:
         return jsonify({"error": "Missing required fields"}), 400
 
-    # AI Analysis
-    analysis = analyze_signal(title, content)
-    if not analysis['valid']:
-        return jsonify({"error": analysis['reason']}), 400
-
-    # Find Sender (Alien)
+    # 1. Find Sender (Alien)
     sender = User.query.filter((User.username == sender_identifier) | (User.email == sender_identifier)).first()
     if not sender:
         return jsonify({"error": "Alien identity not found"}), 404
 
-    # Find Recipient (Company)
+    # 2. Find Recipient (Company)
     company = Company.query.filter_by(company_name=company_name).first()
     if not company:
         return jsonify({"error": "Target Boardroom not found"}), 404
+
+    # 3. Context Retrieval (RAG-lite)
+    # Fetch last 10 ideas for this company to check for duplicates
+    recent_ideas = Idea.query.filter_by(recipient_company_id=company.id)\
+        .order_by(Idea.created_at.desc()).limit(20).all()
+    
+    recent_ideas_context = [f"Title: {i.title}, Content: {i.content}" for i in recent_ideas]
+
+    # 4. AI Analysis
+    print(f"Analyzing signal for {company_name}...")
+    analysis = analyze_signal(title, content, company_name, recent_ideas_context)
+    
+    if not analysis['valid']:
+        return jsonify({
+            "error": "Signal Filtered by AI System", 
+            "details": analysis['reason']
+        }), 400
 
     new_idea = Idea(
         title=title,
@@ -38,6 +50,8 @@ def submit_idea():
         sender_id=sender.id,
         recipient_company_id=company.id,
         signal_type=signal_type,
+        status='pending',
+        is_useful=True, # AI said it's valid
         potential_value=analysis['value'],
         tags=analysis['tags']
     )
@@ -48,7 +62,6 @@ def submit_idea():
     return jsonify({
         "message": "Signal transmitted successfully",
         "signal_id": new_idea.id,
-        "status": "pending",
         "status": "pending",
         "signal_type": signal_type,
         "potential_value": analysis['value'],
