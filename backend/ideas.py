@@ -1,14 +1,77 @@
-from flask import Blueprint, request, jsonify
-from models import db, Idea, User, Company
-from analysis import analyze_signal
+from flask import Blueprint, request, jsonify, current_app
+from models import db, Idea, User, Company, Message
+from agents import run_pipeline
+import threading
 
 ideas_bp = Blueprint('ideas', __name__, url_prefix='/api/ideas')
+
+def run_volcano_analysis(app, idea_id, company_name, title, content):
+    """
+    Background Task: The 'Thinking Engine' Pipeline.
+    Now powered by Multi-Agent Swarm logic.
+    """
+    with app.app_context():
+        try:
+            print(f"🌋 Volcano Active: Analyzing Signal #{idea_id} for {company_name}")
+            
+            # Context Retrieval (Inside Thread)
+            company = Company.query.filter_by(company_name=company_name).first()
+            if not company:
+                print("Error: Company not found in background thread")
+                return
+
+            idea = Idea.query.get(idea_id)
+            if not idea: 
+                return
+
+            recent_ideas = Idea.query.filter_by(recipient_company_id=company.id)\
+                .filter(Idea.id != idea_id)\
+                .order_by(Idea.created_at.desc()).limit(20).all()
+            
+            recent_context = [f"Title: {i.title}, Content: {i.content}, Status: {i.status}" for i in recent_ideas]
+
+            # --- RUN AGENT PIPELINE ---
+            analysis = run_pipeline(title, content, company_name, recent_context, idea.signal_type, idea_id=idea.id)
+            
+            # Refetch idea to lock for update (safeguard)
+            idea = Idea.query.get(idea_id)
+            
+            # Save Results
+            if analysis['valid']:
+                print(f"✅ Pipeline Approved: Signal #{idea_id}")
+                idea.status = 'sent_to_boardroom'
+                idea.tags = analysis.get('tags', '')
+                idea.ai_analysis_log = analysis['log']
+            else:
+                print(f"❌ Pipeline Rejected: Signal #{idea_id}")
+                idea.status = 'volcano_rejected'
+                idea.ai_analysis_log = analysis['log'] + f"\n\n[FINAL REJECTION REASON]: {analysis['reason']}"
+                
+                # Feedback Message
+                msg = Message(
+                    idea_id=idea.id,
+                    sender_type='volcano', 
+                    content=f"COGNITIVE CORE ALERT: {analysis['reason']}"
+                )
+                db.session.add(msg)
+            
+            db.session.commit()
+            print(f"🧠 Thinking Complete for Signal #{idea_id}")
+
+        except Exception as e:
+            print(f"🔥 Volcano Core Failure: {e}")
+            # Failsafe
+            with app.app_context():
+                idea = Idea.query.get(idea_id)
+                if idea:
+                    idea.status = 'volcano_rejected'
+                    idea.ai_analysis_log = f"SYSTEM ERROR: {str(e)}"
+                    db.session.commit()
 
 @ideas_bp.route('/submit', methods=['POST'])
 def submit_idea():
     data = request.get_json()
     title = data.get('title')
-    content = data.get('content')
     content = data.get('content')
     sender_identifier = data.get('sender_identifier') # Alien ID or Email
     company_name = data.get('company_name')
@@ -27,45 +90,37 @@ def submit_idea():
     if not company:
         return jsonify({"error": "Target Boardroom not found"}), 404
 
-    # 3. Context Retrieval (RAG-lite)
-    # Fetch last 10 ideas for this company to check for duplicates
-    recent_ideas = Idea.query.filter_by(recipient_company_id=company.id)\
-        .order_by(Idea.created_at.desc()).limit(20).all()
-    
-    recent_ideas_context = [f"Title: {i.title}, Content: {i.content}" for i in recent_ideas]
-
-    # 4. AI Analysis
-    print(f"Analyzing signal for {company_name}...")
-    analysis = analyze_signal(title, content, company_name, recent_ideas_context)
-    
-    if not analysis['valid']:
-        return jsonify({
-            "error": "Signal Filtered by AI System", 
-            "details": analysis['reason']
-        }), 400
-
+    # 3. Create 'Processing' Idea using valid SQLAlchemy model status
+    # Note: 'processing' status might effectively mean 'pending' until changed, 
+    # but we will use 'processing' to denote "At Volcano".
     new_idea = Idea(
         title=title,
         content=content,
         sender_id=sender.id,
         recipient_company_id=company.id,
         signal_type=signal_type,
-        status='pending',
-        is_useful=True, # AI said it's valid
-        potential_value=analysis['value'],
-        tags=analysis['tags']
+        status='processing', # Initial State
+        is_useful=False, 
+        potential_value="Analyzing...",
+        tags="Verifying..."
     )
 
     db.session.add(new_idea)
     db.session.commit()
 
+    # 4. Spawn Background Thread (Async Intelligence)
+    # Pass 'current_app._get_current_object()' to allow thread to access app_context
+    app_instance = current_app._get_current_object()
+    threading.Thread(
+        target=run_volcano_analysis, 
+        args=(app_instance, new_idea.id, company_name, title, content)
+    ).start()
+
     return jsonify({
-        "message": "Signal transmitted successfully",
+        "message": "Signal intercepted by Volcano. Processing started.",
         "signal_id": new_idea.id,
-        "status": "pending",
-        "signal_type": signal_type,
-        "potential_value": analysis['value'],
-        "tags": analysis['tags']
+        "status": "processing",
+        "signal_type": signal_type
     }), 201
 
 @ideas_bp.route('/my', methods=['GET'])
@@ -101,22 +156,34 @@ def get_my_ideas():
 
 @ideas_bp.route('/companies', methods=['GET'])
 def get_companies():
-    companies = Company.query.all()
-    results = [{"id": c.id, "name": c.company_name, "logo_url": c.logo_url} for c in companies]
-    return jsonify(results), 200
+    try:
+        companies = Company.query.all()
+        results = [{"id": c.id, "name": c.company_name, "logo_url": c.logo_url} for c in companies]
+        return jsonify(results), 200
+    except Exception as e:
+        return jsonify({"error": str(e), "type": str(type(e))}), 500
 
 @ideas_bp.route('/company/<int:company_id>', methods=['GET'])
 def get_company_ideas(company_id):
-    ideas = Idea.query.filter_by(recipient_company_id=company_id).order_by(Idea.created_at.desc()).all()
+    # Only fetch signals that have passed Volcano (or are in legacy valid states)
+    # We exclude 'processing' and 'volcano_rejected'
+    valid_statuses = ['sent_to_boardroom', 'interesting', 'accepted', 'rejected']
+    ideas = Idea.query.filter(
+        Idea.recipient_company_id == company_id,
+        Idea.status.in_(valid_statuses)
+    ).order_by(Idea.created_at.desc()).all()
     
     results = []
     for idea in ideas:
         sender = User.query.get(idea.sender_id)
+        # Map 'sent_to_boardroom' to 'pending' for Frontend compatibility
+        display_status = 'pending' if idea.status == 'sent_to_boardroom' else idea.status
+        
         results.append({
             "id": idea.id,
             "title": idea.title,
             "content": idea.content,
-            "status": idea.status,
+            "status": display_status,
             "signal_type": idea.signal_type,
             "sender_identifier": sender.username if sender else "Unknown Alien",
             "sender_name": sender.name if sender and sender.name else "Unknown Entity",

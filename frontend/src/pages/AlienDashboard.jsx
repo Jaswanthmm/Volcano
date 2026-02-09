@@ -94,30 +94,53 @@ const AlienDashboard = () => {
             navigate('/login/alien');
             return;
         }
-        const userData = JSON.parse(storedUser);
-        setUser(userData);
+        try {
+            const parsedUser = JSON.parse(storedUser);
+            setUser(parsedUser);
+        } catch (e) {
+            console.error("Auth Data Corrupted", e);
+            localStorage.removeItem('alien_user');
+            navigate('/login/alien');
+        }
+    }, [navigate]);
 
-        // 2. Fetch Data
-        Promise.all([
-            fetch(`/api/ideas/my?identifier=${userData.alien_id}`),
-            fetch(`/api/ideas/companies`)
-        ])
-            .then(async ([ideasRes, companiesRes]) => {
+    useEffect(() => {
+        if (!user) return;
+
+        // 2. Fetch Data (Initial Load)
+        const fetchData = async () => {
+            try {
+                const [ideasRes, companiesRes] = await Promise.all([
+                    fetch(`/api/ideas/my?identifier=${user.alien_id}`),
+                    fetch(`/api/ideas/companies`)
+                ]);
                 if (ideasRes.ok) setIdeas(await ideasRes.json());
                 if (companiesRes.ok) setCompanies(await companiesRes.json());
-            })
-            .finally(() => setLoading(false));
+            } finally {
+                setLoading(false);
+            }
+        };
 
-    }, [navigate]);
+        fetchData();
+
+        // 3. Polling for Status Updates (Async Pipeline)
+        const interval = setInterval(() => {
+            fetch(`/api/ideas/my?identifier=${user.alien_id}`)
+                .then(res => res.ok ? res.json() : [])
+                .then(data => {
+                    setIdeas(prev => data);
+                });
+        }, 3000); // Poll every 3 seconds
+
+        return () => clearInterval(interval);
+
+    }, [user]);
 
     const handleLogout = () => {
         localStorage.removeItem('alien_token');
         localStorage.removeItem('alien_user');
         navigate('/');
     };
-
-
-
     const handleSubmit = async (e) => {
         e.preventDefault();
         setSubmitStatus('sending');
@@ -144,17 +167,16 @@ const AlienDashboard = () => {
                 throw new Error(errorDetail);
             }
 
-            // Success Update
-            // Optimistic update or refetch
-            setIdeas([{
+            // Success: Add Optimistic "Processing" Idea
+            setIdeas(prev => [{
                 id: data.signal_id,
                 title,
                 content,
                 signal_type: signalType,
-                status: 'pending',
+                status: 'processing', // Display as "Sent to Volcano"
                 company_name: selectedCompany,
                 created_at: new Date().toISOString()
-            }, ...ideas]);
+            }, ...prev]);
 
             setSubmitStatus('success');
             setTitle('');
@@ -184,10 +206,10 @@ const AlienDashboard = () => {
 
     // Filter Logic
     const visibleIdeas = currentView === 'transmit'
-        ? ideas.filter(i => i.status === 'pending')
+        ? ideas.filter(i => i.status === 'pending' || i.status === 'processing') // Show processing/pending in Transmit
         : currentView === 'active'
-            ? ideas.filter(i => i.status === 'interesting')
-            : ideas.filter(i => i.status === 'accepted' || i.status === 'rejected');
+            ? ideas.filter(i => i.status === 'sent_to_boardroom' || i.status === 'interesting') // Show sent in Active
+            : ideas.filter(i => i.status === 'accepted' || i.status === 'rejected' || i.status === 'volcano_rejected'); // Show final rejections in Archive
 
     return (
         <div className="min-h-screen bg-black text-green-500 font-mono relative selection:bg-green-900 selection:text-white">
@@ -206,7 +228,7 @@ const AlienDashboard = () => {
                     </div>
                     <div>
                         <h1 className="font-bold tracking-widest text-sm">UPLINK NODE</h1>
-                        <p className="text-[10px] text-green-500/50">v3.1 ONLINE</p>
+                        <p className="text-[10px] text-green-500/50">v3.2 ASYNC</p>
                     </div>
                 </div>
 
@@ -221,7 +243,7 @@ const AlienDashboard = () => {
                         onClick={() => setCurrentView('active')}
                         className={`px-4 py-3 rounded-lg cursor-pointer transition-colors text-xs tracking-widest flex items-center gap-3 font-bold ${currentView === 'active' ? 'bg-green-900/20 border border-green-500/30 text-green-400' : 'text-green-600 hover:text-green-400 hover:bg-white/5'}`}
                     >
-                        <Activity size={16} /> ACTIVE LOGS
+                        <Activity size={16} /> BOARDROOM ACTIVE
                     </div>
                     <div
                         onClick={() => setCurrentView('archive')}
@@ -254,7 +276,7 @@ const AlienDashboard = () => {
             </div>
 
             {/* Main Content */}
-            <div className="ml-64 p-8 relative z-10 max-w-5xl">
+            <div className="ml-64 p-8 relative z-10 max-w-full">
 
                 {/* Header */}
                 <header className="mb-12 border-b border-green-500/20 pb-6 flex justify-between items-end">
@@ -301,151 +323,116 @@ const AlienDashboard = () => {
                                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
                                 <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
                             </span>
-                            <span className="text-xs font-bold text-green-400">OPTIMAL</span>
+                            <span className="text-xs text-green-400 font-bold">ONLINE</span>
                         </div>
                     </div>
                 </header>
 
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-
-                    {/* Submission Panel (Only visible in Transmit Mode) */}
+                <div className="flex gap-8">
+                    {/* LEFT PANEL: INPUT (Only on Transmit) */}
                     {currentView === 'transmit' && (
-                        <div className="lg:col-span-2 space-y-8">
-
-                            {/* New Signal Form */}
-                            <div className="bg-black/40 backdrop-blur-md border border-green-500/20 rounded-xl p-6 relative overflow-hidden group">
-                                <div className="absolute top-0 right-0 p-4 text-green-500/10 group-hover:text-green-500/20 transition-colors">
-                                    <Send size={80} strokeWidth={1} />
-                                </div>
-
-                                <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
-                                    <span className="w-1 h-6 bg-green-500 block"></span>
-                                    NEW SIGNAL
-                                </h3>
-
-                                <form onSubmit={handleSubmit} className="space-y-4 relative z-10">
-                                    <div>
-                                        <label className="block text-[10px] uppercase tracking-widest text-green-500/60 mb-2 font-bold">Signal Title</label>
-                                        <input
-                                            type="text"
-                                            required
-                                            value={title}
-                                            onChange={(e) => setTitle(e.target.value)}
-                                            className="w-full bg-green-900/10 border border-green-500/20 rounded p-3 text-green-300 focus:outline-none focus:border-green-500/50 focus:bg-green-900/20 transition-all font-mono text-sm placeholder-green-800"
-                                            placeholder="Enter abstract..."
-                                        />
+                        <div className="w-5/12">
+                            <form onSubmit={handleSubmit} className="bg-green-900/5 border border-green-500/20 p-6 rounded-xl space-y-6 relative overflow-hidden">
+                                {submitStatus === 'sending' && (
+                                    <div className="absolute inset-0 bg-black/60 backdrop-blur-sm z-10 flex flex-col items-center justify-center text-green-500">
+                                        <Loader2 className="animate-spin mb-2" />
+                                        <span className="text-xs tracking-widest animate-pulse">ENCRYPTING SIGNAL...</span>
                                     </div>
-
-                                    <div className="relative">
-                                        <label className="block text-[10px] uppercase tracking-widest text-green-500/60 mb-2 font-bold">Target Boardroom</label>
-                                        <div className="relative">
-                                            <input
-                                                type="text"
-                                                required
-                                                value={searchQuery}
-                                                onChange={(e) => {
-                                                    setSearchQuery(e.target.value);
-                                                    setIsDropdownOpen(true);
-                                                    if (selectedCompany) setSelectedCompany(''); // Reset selection if user changes input
-                                                }}
-                                                onFocus={() => setIsDropdownOpen(true)}
-                                                // onBlur={() => setTimeout(() => setIsDropdownOpen(false), 200)} // Delay to allow click
-                                                className="w-full bg-green-900/10 border border-green-500/20 rounded p-3 text-green-300 focus:outline-none focus:border-green-500/50 focus:bg-green-900/20 transition-all font-mono text-sm placeholder-green-800/50"
-                                                placeholder="Type to search node..."
-                                            />
-                                            {isDropdownOpen && (
-                                                <div className="absolute z-50 left-0 right-0 mt-1 bg-black border border-green-500/30 rounded shadow-xl max-h-48 overflow-y-auto custom-scrollbar">
-                                                    {companies.filter(c => c.name.toLowerCase().includes(searchQuery.toLowerCase())).length === 0 ? (
-                                                        <div className="p-3 text-green-500/30 text-xs italic">No nodes found.</div>
-                                                    ) : (
-                                                        companies
-                                                            .filter(c => c.name.toLowerCase().includes(searchQuery.toLowerCase()))
-                                                            .map(c => (
-                                                                <div
-                                                                    key={c.id}
-                                                                    onClick={() => {
-                                                                        setSelectedCompany(c.name);
-                                                                        setSearchQuery(c.name);
-                                                                        setIsDropdownOpen(false);
-                                                                    }}
-                                                                    className="p-3 hover:bg-green-500/10 cursor-pointer text-green-400 text-sm border-b border-green-500/10 last:border-none"
-                                                                >
-                                                                    {c.name}
-                                                                </div>
-                                                            ))
-                                                    )}
-                                                </div>
-                                            )}
-                                        </div>
+                                )}
+                                {submitStatus === 'success' && (
+                                    <div className="absolute inset-0 bg-black/80 backdrop-blur-md z-10 flex flex-col items-center justify-center text-green-400">
+                                        <CheckCircle2 size={48} className="mb-4" />
+                                        <span className="text-sm font-bold tracking-widest">SIGNAL DISPATCHED</span>
                                     </div>
-
-                                    <div>
-                                        <label className="block text-[10px] uppercase tracking-widest text-green-500/60 mb-2 font-bold">Signal Type</label>
-                                        <div className="flex gap-4 mb-8">
-                                            {['New Feature', 'Bug', 'Others'].map((type) => (
-                                                <label key={type} className="flex items-center gap-2 cursor-pointer group/type">
-                                                    <div className={`w-4 h-4 rounded-full border border-green-500/50 flex items-center justify-center ${signalType === type ? 'bg-green-500/20' : ''}`}>
-                                                        {signalType === type && <div className="w-2 h-2 rounded-full bg-green-500"></div>}
-                                                    </div>
-                                                    <input
-                                                        type="radio"
-                                                        name="signalType"
-                                                        value={type}
-                                                        checked={signalType === type}
-                                                        onChange={(e) => setSignalType(e.target.value)}
-                                                        className="hidden"
-                                                    />
-                                                    <span className={`text-xs font-mono font-bold ${signalType === type ? 'text-green-300' : 'text-green-500/50 group-hover/type:text-green-400'}`}>{type}</span>
-                                                </label>
-                                            ))}
-                                        </div>
-                                    </div>
-
-                                    <div>
-                                        <label className="block text-[10px] uppercase tracking-widest text-green-500/60 mb-2 font-bold">Data Payload</label>
-                                        <textarea
-                                            required
-                                            value={content}
-                                            onChange={(e) => setContent(e.target.value)}
-                                            rows={5}
-                                            className="w-full bg-green-900/10 border border-green-500/20 rounded p-3 text-green-300 focus:outline-none focus:border-green-500/50 focus:bg-green-900/20 transition-all font-mono text-sm placeholder-green-800"
-                                            placeholder="Describe your innovation..."
-                                        />
-                                    </div>
-
-                                    <div className="pt-4 flex items-center justify-between">
-                                        {submitStatus === 'success' && (
-                                            <span className="text-green-400 text-xs flex items-center gap-2 animate-pulse">
-                                                <CheckCircle2 size={14} /> TRANSMISSION SUCCESSFUL
-                                            </span>
-                                        )}
-                                        {submitStatus === 'error' && (
-                                            <span className="text-red-400 text-xs flex items-center gap-2">
-                                                <AlertTriangle size={14} /> {errorMessage ? errorMessage.toUpperCase() : 'ERROR IN UPLINK'}
-                                            </span>
-                                        )}
+                                )}
+                                {submitStatus === 'error' && (
+                                    <div className="absolute inset-0 bg-black/90 backdrop-blur-md z-10 flex flex-col items-center justify-center text-red-500 p-6 text-center">
+                                        <XCircle size={48} className="mb-4" />
+                                        <span className="text-sm font-bold tracking-widest mb-2">TRANSMISSION FAILED</span>
+                                        <p className="text-xs opacity-70 border border-red-500/30 p-2 rounded bg-red-900/10">
+                                            {errorMessage}
+                                        </p>
                                         <button
-                                            type="submit"
-                                            disabled={submitStatus === 'sending'}
-                                            className="ml-auto px-6 py-3 bg-green-500/10 hover:bg-green-500/20 border border-green-500/50 text-green-400 hover:text-green-300 rounded font-bold text-xs tracking-[0.2em] flex items-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                            type="button"
+                                            onClick={() => setSubmitStatus(null)}
+                                            className="mt-4 text-[10px] underline hover:text-red-400"
                                         >
-                                            {submitStatus === 'sending' ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
-                                            BROADCAST
+                                            RETRY HANDSHAKE
                                         </button>
                                     </div>
-                                </form>
-                            </div>
+                                )}
 
+                                <div>
+                                    <label className="block text-[10px] uppercase tracking-widest text-green-500/60 mb-2">Target Boardroom</label>
+                                    <SearchableDropdown
+                                        companies={companies}
+                                        selectedCompany={selectedCompany}
+                                        onSelect={(name) => setSelectedCompany(name)}
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-[10px] uppercase tracking-widest text-green-500/60 mb-2">Signal Core</label>
+                                    <input
+                                        type="text"
+                                        value={title}
+                                        onChange={(e) => setTitle(e.target.value)}
+                                        className="w-full bg-black border border-green-500/20 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-green-500 transition-colors uppercase tracking-wider placeholder-green-800"
+                                        placeholder="Operation Name..."
+                                        maxLength={15}
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-[10px] uppercase tracking-widest text-green-500/60 mb-2">Payload Details</label>
+                                    <textarea
+                                        value={content}
+                                        onChange={(e) => setContent(e.target.value)}
+                                        className="w-full bg-black border border-green-500/20 rounded-lg px-4 py-3 text-sm text-green-300 focus:outline-none focus:border-green-500 transition-colors h-32 resize-none custom-scrollbar"
+                                        placeholder="Describe the opportunity..."
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-[10px] uppercase tracking-widest text-green-500/60 mb-2">Classification</label>
+                                    <div className="flex bg-black rounded-lg p-1 border border-green-500/20">
+                                        {['New Feature', 'Bug', 'Strategy'].map(type => (
+                                            <button
+                                                key={type}
+                                                type="button"
+                                                onClick={() => setSignalType(type)}
+                                                className={`flex-1 py-2 text-[9px] uppercase font-bold rounded transition-all ${signalType === type ? 'bg-green-500 text-black shadow-[0_0_10px_rgba(34,197,94,0.4)]' : 'text-green-600 hover:text-green-400'}`}
+                                            >
+                                                {type}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <button
+                                    type="submit"
+                                    disabled={!title || !content || !selectedCompany}
+                                    className="w-full py-4 bg-green-600 hover:bg-green-500 text-black font-bold tracking-[0.2em] uppercase rounded-lg shadow-[0_0_20px_rgba(34,197,94,0.3)] hover:shadow-[0_0_30px_rgba(34,197,94,0.6)] transition-all disabled:opacity-50 disabled:cursor-not-allowed text-xs flex items-center justify-center gap-2"
+                                >
+                                    <Radio size={16} className={submitStatus === 'sending' ? 'animate-spin' : ''} />
+                                    Broadcast Signal
+                                </button>
+                            </form>
                         </div>
                     )}
 
-                    {/* History / Log Panel */}
-                    <div className={`${currentView === 'transmit' ? '' : 'col-span-3'} space-y-6`}>
-                        <div className="bg-black/40 backdrop-blur-md border border-green-500/20 rounded-xl p-6 h-[calc(100vh-200px)] overflow-y-auto custom-scrollbar">
-                            <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2 sticky top-0 bg-black/80 p-2 -mx-2 -mt-2 backdrop-blur z-10">
-                                <span className="w-1 h-6 bg-green-500/50 block"></span>
-                                {currentView === 'transmit' ? 'TRANSMISSION LOG' : currentView === 'active' ? 'ACTIVE CHANNELS' : 'SIGNAL ARCHIVE'}
-                            </h3>
+
+
+                    {/* RIGHT PANEL: LOGS */}
+                    <div className={currentView === 'transmit' ? "w-7/12" : "w-full"}>
+                        <div className="bg-black/50 border border-green-500/10 rounded-xl p-6 h-full flex flex-col">
+                            <div className="flex justify-between items-center mb-6">
+                                <h3 className="text-xs font-bold text-green-500 uppercase tracking-widest flex items-center gap-2">
+                                    <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                                    Signal Telemetry
+                                </h3>
+                                {/* Search or Filter could go here */}
+                            </div>
 
                             <div className="space-y-4">
                                 {visibleIdeas.length === 0 ? (
@@ -455,17 +442,21 @@ const AlienDashboard = () => {
                                     </div>
                                 ) : (
                                     visibleIdeas.map(idea => (
-                                        <div key={idea.id} className="p-4 bg-green-900/5 border border-green-500/10 rounded-lg hover:border-green-500/30 transition-all group">
+                                        <div key={idea.id} className={`p-4 bg-green-900/5 border rounded-lg transition-all group ${idea.status === 'volcano_rejected' ? 'border-red-500/30 hover:border-red-500/50' : 'border-green-500/10 hover:border-green-500/30'}`}>
                                             <div className="flex justify-between items-start mb-2">
                                                 <div className="flex items-center gap-2">
                                                     <span className="text-[10px] bg-green-900/40 text-green-300 px-2 py-0.5 rounded border border-green-500/20">{idea.signal_type || 'Signal'}</span>
                                                     <h4 className="font-bold text-green-400 text-sm group-hover:text-green-300">{idea.title}</h4>
                                                 </div>
-                                                <span className={`text-[10px] uppercase tracking-wider px-2 py-0.5 rounded border ${idea.status === 'pending' ? 'border-yellow-500/20 text-yellow-500/80' :
-                                                    idea.status === 'accepted' ? 'border-blue-500/20 text-blue-400' :
-                                                        'border-red-500/20 text-red-500'
+                                                <span className={`text-[10px] uppercase tracking-wider px-2 py-0.5 rounded border flex items-center gap-1 ${idea.status === 'processing' ? 'border-yellow-500/20 text-yellow-500 animate-pulse' :
+                                                    idea.status === 'sent_to_boardroom' ? 'border-green-500/20 text-green-400' :
+                                                        idea.status === 'volcano_rejected' ? 'border-red-500/20 text-red-500' :
+                                                            'border-gray-500/20 text-gray-500'
                                                     }`}>
-                                                    {idea.status}
+                                                    {idea.status === 'processing' && <Loader2 size={10} className="animate-spin" />}
+                                                    {idea.status === 'processing' ? 'SENT TO VOLCANO' :
+                                                        idea.status === 'sent_to_boardroom' ? 'SENT TO BOARDROOM' :
+                                                            idea.status === 'volcano_rejected' ? 'REJECTED BY VOLCANO' : idea.status}
                                                 </span>
                                             </div>
                                             <div className="flex items-center justify-between text-[10px] text-green-500/40 mt-3">
@@ -474,23 +465,21 @@ const AlienDashboard = () => {
                                                 </span>
                                                 <span>{new Date(idea.created_at).toLocaleDateString()}</span>
                                             </div>
-                                            {idea.potential_value && (
-                                                <div className="mt-2 pt-2 border-t border-green-500/10 flex items-center gap-2">
-                                                    {idea.tags && (Array.isArray(idea.tags) ? idea.tags : idea.tags.split(',')).slice(0, 3).map((tag, i) => (
-                                                        <span key={i} className="text-[9px] px-1.5 py-0.5 bg-green-500/5 border border-green-500/10 rounded text-green-400/70 tracking-wider uppercase">{tag.trim()}</span>
-                                                    ))}
-                                                </div>
-                                            )}
-                                            {(idea.status === 'interesting' || idea.status === 'accepted') ? (
+
+                                            {/* Action Buttons */}
+                                            {(idea.status === 'sent_to_boardroom' || idea.status === 'interesting' || idea.status === 'accepted' || idea.status === 'volcano_rejected') ? (
                                                 <button
                                                     onClick={(e) => { e.stopPropagation(); openChat(idea); }}
-                                                    className="mt-3 w-full py-2 bg-green-500/10 hover:bg-green-500/20 border border-green-500/20 rounded text-[10px] font-bold text-green-400 flex items-center justify-center gap-2 transition-colors"
+                                                    className={`mt-3 w-full py-2 rounded text-[10px] font-bold flex items-center justify-center gap-2 transition-colors ${idea.status === 'volcano_rejected'
+                                                        ? 'bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400'
+                                                        : 'bg-green-500/10 hover:bg-green-500/20 border border-green-500/20 text-green-400'
+                                                        }`}
                                                 >
-                                                    <MessageSquare size={12} /> COMM LINK
+                                                    <MessageSquare size={12} /> {idea.status === 'volcano_rejected' ? 'VIEW REJECTION MEMO' : 'COMM LINK'}
                                                 </button>
                                             ) : (
                                                 <div className="mt-3 w-full py-2 bg-white/5 border border-white/5 rounded text-[10px] text-white/20 text-center flex items-center justify-center gap-2 cursor-not-allowed">
-                                                    <Shield size={12} /> SECURE CHANNEL LOCKED
+                                                    <Shield size={12} /> {idea.status === 'processing' ? 'AWAITING VOLCANO PROTOCOL...' : 'SECURE CHANNEL LOCKED'}
                                                 </div>
                                             )}
                                         </div>
@@ -501,89 +490,93 @@ const AlienDashboard = () => {
                     </div>
 
                 </div>
-
             </div>
+
+
             {/* --- ALIEN CHAT MODAL --- */}
-            {showChatModal && selectedSignalForChat && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm">
-                    <div className="bg-[#050b14] border border-green-500/30 w-full max-w-4xl rounded-xl shadow-2xl relative overflow-hidden flex h-[600px] font-mono">
+            {
+                showChatModal && selectedSignalForChat && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm">
+                        <div className="bg-[#050b14] border border-green-500/30 w-full max-w-4xl rounded-xl shadow-2xl relative overflow-hidden flex h-[600px] font-mono">
 
-                        {/* Modal Close */}
-                        <button
-                            onClick={() => setShowChatModal(false)}
-                            className="absolute top-4 right-4 text-green-500/30 hover:text-green-500 transition-colors z-50"
-                        >
-                            <XCircle size={24} />
-                        </button>
+                            {/* Modal Close */}
+                            <button
+                                onClick={() => setShowChatModal(false)}
+                                className="absolute top-4 right-4 text-green-500/30 hover:text-green-500 transition-colors z-50"
+                            >
+                                <XCircle size={24} />
+                            </button>
 
-                        {/* Left: Context Summary */}
-                        <div className="w-1/3 bg-green-900/10 border-r border-green-500/20 p-8 flex flex-col">
-                            <h3 className="text-xs font-bold text-green-600 uppercase tracking-widest mb-4">Transmission Context</h3>
-                            <h2 className="text-xl font-bold text-green-400 mb-2 leading-tight">{selectedSignalForChat.title}</h2>
-                            <div className="flex items-center gap-2 text-green-500/50 text-[10px] uppercase tracking-widest mb-6">
-                                <Shield size={12} /> TO: {selectedSignalForChat.company_name}
-                            </div>
-                            <div className="flex-1 overflow-hidden relative">
-                                <div className="absolute inset-0 overflow-y-auto text-sm text-green-300/60 leading-relaxed pr-2 custom-scrollbar">
-                                    {selectedSignalForChat.content}
+                            {/* Left: Context Summary */}
+                            <div className="w-1/3 bg-green-900/10 border-r border-green-500/20 p-8 flex flex-col">
+                                <h3 className="text-xs font-bold text-green-600 uppercase tracking-widest mb-4">Transmission Context</h3>
+                                <h2 className="text-xl font-bold text-green-400 mb-2 leading-tight">{selectedSignalForChat.title}</h2>
+                                <div className="flex items-center gap-2 text-green-500/50 text-[10px] uppercase tracking-widest mb-6">
+                                    <Shield size={12} /> TO: {selectedSignalForChat.company_name}
                                 </div>
-                            </div>
-                        </div>
-
-                        {/* Right: Chat Interface */}
-                        <div className="flex-1 flex flex-col bg-black relative">
-                            {/* Chat Header */}
-                            <div className="p-4 border-b border-green-500/20 bg-green-900/5 flex items-center gap-3">
-                                <MessageSquare size={16} className="text-green-500" />
-                                <span className="text-xs font-bold text-white uppercase tracking-widest">Secure Uplink: {selectedSignalForChat.company_name}</span>
-                            </div>
-
-                            {/* Messages List */}
-                            <div className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar">
-                                {chatMessages.length === 0 ? (
-                                    <div className="flex flex-col items-center justify-center h-full text-green-500/20">
-                                        <HelpCircle size={32} className="mb-2 opacity-50" />
-                                        <p className="text-xs uppercase tracking-widest">No transmissions yet</p>
+                                <div className="flex-1 overflow-hidden relative">
+                                    <div className="absolute inset-0 overflow-y-auto text-sm text-green-300/60 leading-relaxed pr-2 custom-scrollbar">
+                                        {selectedSignalForChat.content}
                                     </div>
-                                ) : (
-                                    chatMessages.map((msg) => (
-                                        <div key={msg.id} className={`flex flex-col ${msg.sender_type === 'alien' ? 'items-end' : 'items-start'}`}>
-                                            <div className={`max-w-[80%] p-3 rounded-lg text-sm ${msg.sender_type === 'alien' ? 'bg-green-900/20 border border-green-500/30 text-green-100 rounded-tr-none' : 'bg-white/5 border border-white/10 text-gray-300 rounded-tl-none'}`}>
-                                                {msg.content}
-                                            </div>
-                                            <span className="text-[9px] text-green-500/30 mt-1 uppercase tracking-wider">
-                                                {msg.sender_type === 'alien' ? 'You' : 'Boardroom'} • {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                            </span>
-                                        </div>
-                                    ))
-                                )}
+                                </div>
                             </div>
 
-                            {/* Input Area */}
-                            <div className="p-4 border-t border-green-500/20 bg-green-900/5">
-                                <div className="flex items-center gap-2">
-                                    <input
-                                        type="text"
-                                        value={newMessage}
-                                        onChange={(e) => setNewMessage(e.target.value)}
-                                        onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
-                                        placeholder="Type your response..."
-                                        className="flex-1 bg-black/40 border border-green-500/20 rounded-lg px-4 py-3 text-sm text-green-300 focus:outline-none focus:border-green-500/50 transition-all placeholder-green-800"
-                                    />
-                                    <button
-                                        onClick={sendMessage}
-                                        disabled={sendingMsg || !newMessage.trim()}
-                                        className="p-3 rounded-lg bg-green-600/20 hover:bg-green-600/40 border border-green-500/50 text-green-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                                    >
-                                        {sendingMsg ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
-                                    </button>
+                            {/* Right: Chat Interface */}
+                            <div className="flex-1 flex flex-col bg-black relative">
+                                {/* Chat Header */}
+                                <div className="p-4 border-b border-green-500/20 bg-green-900/5 flex items-center gap-3">
+                                    <MessageSquare size={16} className="text-green-500" />
+                                    <span className="text-xs font-bold text-white uppercase tracking-widest">Secure Uplink: {selectedSignalForChat.company_name}</span>
                                 </div>
+
+                                {/* Messages List */}
+                                <div className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar">
+                                    {chatMessages.length === 0 ? (
+                                        <div className="flex flex-col items-center justify-center h-full text-green-500/20">
+                                            <HelpCircle size={32} className="mb-2 opacity-50" />
+                                            <p className="text-xs uppercase tracking-widest">No transmissions yet</p>
+                                        </div>
+                                    ) : (
+                                        chatMessages.map((msg) => (
+                                            <div key={msg.id} className={`flex flex-col ${msg.sender_type === 'alien' ? 'items-end' : 'items-start'}`}>
+                                                <div className={`max-w-[80%] p-3 rounded-lg text-sm ${msg.sender_type === 'alien' ? 'bg-green-900/20 border border-green-500/30 text-green-100 rounded-tr-none' : 'bg-white/5 border border-white/10 text-gray-300 rounded-tl-none'}`}>
+                                                    {msg.content}
+                                                </div>
+                                                <span className="text-[9px] text-green-500/30 mt-1 uppercase tracking-wider">
+                                                    {msg.sender_type === 'alien' ? 'You' : 'Boardroom'} • {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                </span>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+
+                                {/* Input Area */}
+                                <div className="p-4 border-t border-green-500/20 bg-green-900/5">
+                                    <div className="flex items-center gap-2">
+                                        <input
+                                            type="text"
+                                            value={newMessage}
+                                            onChange={(e) => setNewMessage(e.target.value)}
+                                            onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
+                                            placeholder="Type your response..."
+                                            className="flex-1 bg-black/40 border border-green-500/20 rounded-lg px-4 py-3 text-sm text-green-300 focus:outline-none focus:border-green-500/50 transition-all placeholder-green-800"
+                                        />
+                                        <button
+                                            onClick={sendMessage}
+                                            disabled={sendingMsg || !newMessage.trim()}
+                                            className="p-3 rounded-lg bg-green-600/20 hover:bg-green-600/40 border border-green-500/50 text-green-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                        >
+                                            {sendingMsg ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
+                                        </button>
+                                    </div>
+                                </div>
+
                             </div>
                         </div>
                     </div>
-                </div>
-            )}
-        </div>
+                )
+            }
+        </div >
     );
 };
 
@@ -602,7 +595,7 @@ const CompanyBadge = ({ badge }) => {
                     />
                 ) : (
                     <div className="w-full h-full rounded-full bg-green-500/20 flex items-center justify-center text-[10px] font-bold text-white">
-                        {badge.name[0]}
+                        {badge.name[0]?.toUpperCase()}
                     </div>
                 )}
             </div>
@@ -618,6 +611,99 @@ const CompanyBadge = ({ badge }) => {
             <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-black/90 border border-green-500/30 text-green-400 text-[10px] rounded opacity-0 group-hover:opacity-100 transition-all pointer-events-none whitespace-nowrap z-50 backdrop-blur-sm tracking-widest uppercase">
                 {badge.name} Asset
             </div>
+        </div>
+    );
+};
+
+const SearchableDropdown = ({ companies, selectedCompany, onSelect }) => {
+    const [isOpen, setIsOpen] = React.useState(false);
+    const [search, setSearch] = React.useState('');
+    const dropdownRef = React.useRef(null);
+    const inputRef = React.useRef(null);
+
+    React.useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+                setIsOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    React.useEffect(() => {
+        if (isOpen && inputRef.current) {
+            inputRef.current.focus();
+        }
+    }, [isOpen]);
+
+    const filtered = (companies || []).filter(c =>
+        c.name && c.name.toLowerCase().includes(search.toLowerCase())
+    );
+
+    return (
+        <div className="relative" ref={dropdownRef}>
+            <div
+                role="button"
+                tabIndex={0}
+                onClick={() => setIsOpen(!isOpen)}
+                onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        setIsOpen(!isOpen);
+                    }
+                }}
+                className="w-full bg-black border border-green-500/20 rounded-lg px-4 py-3 text-sm text-white flex items-center justify-between cursor-pointer hover:border-green-500/50 transition-colors uppercase tracking-wider outline-none focus:border-green-500"
+            >
+                <div className="flex items-center gap-2">
+                    {selectedCompany ? (
+                        <>
+                            <span>{selectedCompany}</span>
+                        </>
+                    ) : (
+                        <span className="text-green-800">SELECT UPLINK TARGET...</span>
+                    )}
+                </div>
+                <div className={`transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`}>
+                    ▼
+                </div>
+            </div>
+
+            {isOpen && (
+                <div className="absolute top-full left-0 right-0 mt-2 bg-[#050b14] border border-green-500/30 rounded-lg shadow-xl z-50 max-h-60 overflow-y-auto custom-scrollbar">
+                    <div className="sticky top-0 bg-[#050b14] p-2 border-b border-green-500/10 z-10">
+                        <input
+                            ref={inputRef}
+                            type="text"
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                            placeholder="SEARCH FREQUENCY..."
+                            className="w-full bg-black/50 border border-green-500/20 rounded px-3 py-2 text-xs text-green-400 placeholder-green-500/30 focus:outline-none focus:border-green-500/50 uppercase tracking-widest"
+                            autoComplete="off"
+                        />
+                    </div>
+
+                    {filtered.length === 0 ? (
+                        <div className="px-4 py-3 text-[10px] text-green-500/30 text-center italic">
+                            NO UPLINK FOUND
+                        </div>
+                    ) : (
+                        filtered.map(c => (
+                            <div
+                                key={c.id}
+                                onClick={() => {
+                                    onSelect(c.name);
+                                    setIsOpen(false);
+                                    setSearch('');
+                                }}
+                                className="px-4 py-3 hover:bg-green-500/10 cursor-pointer flex items-center gap-3 border-b border-green-500/10 last:border-0 transition-colors"
+                            >
+                                <span className="text-xs font-bold text-green-400 uppercase tracking-wider">{c.name}</span>
+                            </div>
+                        ))
+                    )}
+                </div>
+            )}
         </div>
     );
 };

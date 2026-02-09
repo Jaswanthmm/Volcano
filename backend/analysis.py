@@ -23,16 +23,22 @@ def analyze_signal(title, content, company_name, recent_ideas_context):
 
     # --- 2. AI Analysis (Gemini 2.0 Flash) ---
     try:
-        # Construct Context String
-        context_str = "Recent signals received by this boardroom:\n"
+        # Construct Context String (Most Recent First)
+        context_str = "Recent signals received by this boardroom (MOST RECENT FIRST):\n"
         if recent_ideas_context:
             for idea in recent_ideas_context:
                 context_str += f"- {idea}\n"
         else:
             context_str += "No recent signals.\n"
+        
+        # DEBUG: Verify what the AI sees
+        print("--- DEBUG: AI CONTEXT ---")
+        print(context_str)
+        print("-------------------------")
 
         prompt = f"""
-        You are an advanced AI Gatekeeper for a high-tech corporate boardroom. Your job is to filter incoming "Signals" (ideas) from Aliens.
+        You are an advanced AI Gatekeeper ("The Brain") for a high-tech corporate boardroom. 
+        Your goal is to screen incoming ideas ("Signals") with intense scrutiny.
         
         TARGET BOARDROOM: {company_name}
         
@@ -40,28 +46,59 @@ def analyze_signal(title, content, company_name, recent_ideas_context):
         Title: {title}
         Content: {content}
         
-        CONTEXT (Previous Signals):
+        CONTEXT (Last 20 Signals):
         {context_str}
         
-        TASK:
-        Analyze the incoming signal and determine if it should be let through.
+        ---
         
-        CRITERIA FOR REJECTION (Filter it if ANY are true):
-        1. NONSENSE/LOW QUALITY: Gibberish, "test", "hello", or very low effort/short content (e.g. "some garbage").
-        2. DUPLICATE (STRICT): Compare against Context. REJECT if the underlying idea is the same, even if rephrased (e.g. "Drone delivery" vs "Flying package droppers"). Synonyms/Rewrites = DUPLICATE.
-        3. EXISTING FEATURE: Something {company_name} definitely already has.
-        4. SPAM: Malicious or irrelevant.
+        ### FEW-SHOT TRAINING EXAMPLES (LEARN FROM THESE):
         
-        OUTPUT FORMAT (JSON):
+        [Example 1]
+        Context: "- Title: Cancelled Packs, Content: Sell cancelled orders via popups."
+        Incoming: "Title: rejecting the order, Content: if food orders cancelled... sell to nearby users at discount."
+        Analysis: Both describe selling cancelled food to nearby users.
+        Result: DUPLICATE.
+
+        [Example 2]
+        Context: "- Title: Waste Food, Content: Sell cancelled orders."
+        Incoming: "Title: Food Management, Content: Trigger: Order cancelled -> Offer to nearby."
+        Analysis: Mechanism is identical (Cancel -> Sell).
+        Result: DUPLICATE.
+
+        ---
+        
+        ### ANALYSIS PROTOCOL (CHAIN OF THOUGHT):
+        Before deciding, you must "think" through these steps:
+        
+        1. **PROFILE**: Identify {company_name} using your World Knowledge. What is their core business? (e.g. Swiggy -> Food/Grocery, Uber -> Transport).
+        2. **ABSTRACT**: Extract the "Operational Logic" of the incoming signal (Trigger -> Action -> Result).
+        3. **COMPARE (EXTREME STRICTNESS)**: check the `CONTEXT`.
+           - Compare the "Operational Logic" of this signal against previous signals.
+           - If the *Logic* is the same (e.g. "Cancel Order -> Sell to nearby user"), it is a **DUPLICATE**, even if the words are completely different.
+           - *Rule*: Same Solution + Same Problem = DUPLICATE.
+        4. **HISTORY**: Check `CONTEXT` for similar ideas with `Status: rejected` or `Status: volcano_rejected`.
+           - If YES -> Rejection: HISTORICAL REJECTION.
+        5. **STRATEGY & EXISTING TECH**: 
+           - Does this align with the **PROFILE** you identified in Step 1?
+           - Does {company_name} *already* do this? Use your internal knowledge of their app/services.
+           - If YES -> Rejection: EXISTING FEATURE / STRATEGIC MISMATCH.
+        6. **FEASIBILITY**: Is the idea logically coherent?
+        
+        ---
+        
+        ### OUTPUT FORMAT:
+        Return a pure JSON object. You MUST include your "reasoning_trace" to prove you thought about it.
         {{
+            "reasoning_trace": "Step 1: The idea is... Step 2: Overlap found with...",
             "valid": boolean,
-            "reason": "string (short explanation)",
-            "value": "string (money)",
-            "tags": "string (tags)"
+            "reason": "string (The final rejection message for the user, e.g. 'Invalid Signal (Duplicate Payload)')",
+            "value": "string (Estimated Value, e.g. '$100,000' OR 'N/A')",
+            "tags": "string (comma-separated tags)"
         }}
         """
         
-        model = genai.GenerativeModel('gemini-2.0-flash')
+        generation_config = genai.types.GenerationConfig(temperature=0.0)
+        model = genai.GenerativeModel('gemini-2.0-flash', generation_config=generation_config)
         response = model.generate_content(prompt)
         text = response.text.replace('```json', '').replace('```', '').strip()
         analysis = json.loads(text)

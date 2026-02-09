@@ -35,6 +35,7 @@ class Idea(db.Model):
     
     sender_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     recipient_company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
+    ai_analysis_log = db.Column(db.Text) # Full reasoning from Volcano
 
 class Message(db.Model):
     id = db.Column(db.Integer, primary_key=True)
