@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Radio, Send, Database, Shield, LogOut, Loader2, AlertTriangle, CheckCircle2, User, MessageSquare, XCircle, HelpCircle, Activity } from 'lucide-react';
+import { Radio, Send, Database, Shield, LogOut, Loader2, AlertTriangle, CheckCircle2, User, MessageSquare, XCircle, HelpCircle, Activity, Lock } from 'lucide-react';
 
 const AlienDashboard = () => {
     const navigate = useNavigate();
@@ -136,6 +136,26 @@ const AlienDashboard = () => {
 
     }, [user]);
 
+    // 4. Polling for Chat Messages (Real-time Uplink)
+    useEffect(() => {
+        let chatInterval;
+        if (showChatModal && selectedSignalForChat) {
+            // Immediate fetch on open/change is handled by openChat, but we poll for updates
+            chatInterval = setInterval(async () => {
+                try {
+                    const res = await fetch(`/api/messages/${selectedSignalForChat.id}`);
+                    if (res.ok) {
+                        const msgs = await res.json();
+                        setChatMessages(msgs);
+                    }
+                } catch (err) {
+                    console.error("Chat polling error", err);
+                }
+            }, 3000);
+        }
+        return () => clearInterval(chatInterval);
+    }, [showChatModal, selectedSignalForChat]);
+
     const handleLogout = () => {
         localStorage.removeItem('alien_token');
         localStorage.removeItem('alien_user');
@@ -257,15 +277,15 @@ const AlienDashboard = () => {
                 </div>
 
                 <div className="mt-auto pt-6 border-t border-green-500/20">
-                    <div className="flex items-center gap-3 mb-4">
-                        <div className="w-8 h-8 rounded-full bg-green-900/30 border border-green-500/30 flex items-center justify-center">
-                            <User size={14} />
+                    <Link to={`/alien/${user?.alien_id}`} className="flex items-center gap-3 mb-4 group cursor-pointer">
+                        <div className="w-8 h-8 rounded-full bg-green-900/30 border border-green-500/30 flex items-center justify-center group-hover:border-green-400 transition-colors">
+                            <User size={14} className="group-hover:text-green-400 transition-colors" />
                         </div>
                         <div className="overflow-hidden">
-                            <p className="text-[10px] text-green-400 font-bold truncate w-32">{user?.alien_id}</p>
-                            <p className="text-[9px] text-green-600">CONNECTED</p>
+                            <p className="text-[10px] text-green-400 font-bold truncate w-32 group-hover:text-green-300 transition-colors">{user?.alien_id}</p>
+                            <p className="text-[9px] text-green-600">VIEW ID CARD</p>
                         </div>
-                    </div>
+                    </Link>
                     <button
                         onClick={handleLogout}
                         className="w-full py-2 border border-red-500/30 text-red-500/60 hover:text-red-400 hover:bg-red-900/10 rounded text-[10px] tracking-widest flex items-center justify-center gap-2 transition-all"
@@ -461,21 +481,27 @@ const AlienDashboard = () => {
                                             </div>
                                             <div className="flex items-center justify-between text-[10px] text-green-500/40 mt-3">
                                                 <span className="flex items-center gap-1 uppercase tracking-widest">
-                                                    TO: {idea.company_name}
+                                                    TO: {idea.company_id ? (
+                                                        <Link to={`/boardroom/${idea.company_id}`} className="hover:text-green-400 hover:underline transition-colors" onClick={(e) => e.stopPropagation()}>
+                                                            {idea.company_name}
+                                                        </Link>
+                                                    ) : (
+                                                        idea.company_name
+                                                    )}
                                                 </span>
                                                 <span>{new Date(idea.created_at).toLocaleDateString()}</span>
                                             </div>
 
                                             {/* Action Buttons */}
-                                            {(idea.status === 'sent_to_boardroom' || idea.status === 'interesting' || idea.status === 'accepted' || idea.status === 'volcano_rejected') ? (
+                                            {(idea.status === 'sent_to_boardroom' || idea.status === 'interesting' || idea.status === 'accepted' || idea.status === 'volcano_rejected' || idea.status === 'rejected') ? (
                                                 <button
                                                     onClick={(e) => { e.stopPropagation(); openChat(idea); }}
-                                                    className={`mt-3 w-full py-2 rounded text-[10px] font-bold flex items-center justify-center gap-2 transition-colors ${idea.status === 'volcano_rejected'
+                                                    className={`mt-3 w-full py-2 rounded text-[10px] font-bold flex items-center justify-center gap-2 transition-colors ${idea.status === 'volcano_rejected' || idea.status === 'rejected'
                                                         ? 'bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400'
                                                         : 'bg-green-500/10 hover:bg-green-500/20 border border-green-500/20 text-green-400'
                                                         }`}
                                                 >
-                                                    <MessageSquare size={12} /> {idea.status === 'volcano_rejected' ? 'VIEW REJECTION MEMO' : 'COMM LINK'}
+                                                    <MessageSquare size={12} /> {(idea.status === 'volcano_rejected' || idea.status === 'rejected') ? 'VIEW TRANSMISSION LOG' : 'COMM LINK'}
                                                 </button>
                                             ) : (
                                                 <div className="mt-3 w-full py-2 bg-white/5 border border-white/5 rounded text-[10px] text-white/20 text-center flex items-center justify-center gap-2 cursor-not-allowed">
@@ -512,11 +538,17 @@ const AlienDashboard = () => {
                                 <h3 className="text-xs font-bold text-green-600 uppercase tracking-widest mb-4">Transmission Context</h3>
                                 <h2 className="text-xl font-bold text-green-400 mb-2 leading-tight">{selectedSignalForChat.title}</h2>
                                 <div className="flex items-center gap-2 text-green-500/50 text-[10px] uppercase tracking-widest mb-6">
-                                    <Shield size={12} /> TO: {selectedSignalForChat.company_name}
+                                    <Shield size={12} /> {(selectedSignalForChat.status === 'volcano_rejected' || selectedSignalForChat.status === 'rejected') ? 'SIGNAL REJECTED' : `TO: ${selectedSignalForChat.company_name}`}
                                 </div>
                                 <div className="flex-1 overflow-hidden relative">
-                                    <div className="absolute inset-0 overflow-y-auto text-sm text-green-300/60 leading-relaxed pr-2 custom-scrollbar">
-                                        {selectedSignalForChat.content}
+                                    <div className="absolute inset-0 overflow-y-auto text-sm text-green-300/60 leading-relaxed pr-2 custom-scrollbar whitespace-pre-wrap">
+                                        {selectedSignalForChat.status === 'volcano_rejected' ? (
+                                            <span className="text-red-400/80 font-mono text-xs">
+                                                {selectedSignalForChat.analysis_log || "No analysis log available."}
+                                            </span>
+                                        ) : (
+                                            selectedSignalForChat.content
+                                        )}
                                     </div>
                                 </div>
                             </div>
@@ -526,7 +558,9 @@ const AlienDashboard = () => {
                                 {/* Chat Header */}
                                 <div className="p-4 border-b border-green-500/20 bg-green-900/5 flex items-center gap-3">
                                     <MessageSquare size={16} className="text-green-500" />
-                                    <span className="text-xs font-bold text-white uppercase tracking-widest">Secure Uplink: {selectedSignalForChat.company_name}</span>
+                                    <span className="text-xs font-bold text-white uppercase tracking-widest">
+                                        {(selectedSignalForChat.status === 'volcano_rejected' || selectedSignalForChat.status === 'rejected') ? 'TRANSMISSION LOG' : `Secure Uplink: ${selectedSignalForChat.company_name}`}
+                                    </span>
                                 </div>
 
                                 {/* Messages List */}
@@ -543,7 +577,7 @@ const AlienDashboard = () => {
                                                     {msg.content}
                                                 </div>
                                                 <span className="text-[9px] text-green-500/30 mt-1 uppercase tracking-wider">
-                                                    {msg.sender_type === 'alien' ? 'You' : 'Boardroom'} • {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                    {msg.sender_type === 'alien' ? 'You' : 'Boardroom'} • {new Date(msg.created_at).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                                                 </span>
                                             </div>
                                         ))
@@ -551,27 +585,45 @@ const AlienDashboard = () => {
                                 </div>
 
                                 {/* Input Area */}
+                                {/* Input Area */}
                                 <div className="p-4 border-t border-green-500/20 bg-green-900/5">
-                                    <div className="flex items-center gap-2">
-                                        <input
-                                            type="text"
-                                            value={newMessage}
-                                            onChange={(e) => setNewMessage(e.target.value)}
-                                            onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
-                                            placeholder="Type your response..."
-                                            className="flex-1 bg-black/40 border border-green-500/20 rounded-lg px-4 py-3 text-sm text-green-300 focus:outline-none focus:border-green-500/50 transition-all placeholder-green-800"
-                                        />
-                                        <button
-                                            onClick={sendMessage}
-                                            disabled={sendingMsg || !newMessage.trim()}
-                                            className="p-3 rounded-lg bg-green-600/20 hover:bg-green-600/40 border border-green-500/50 text-green-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                                        >
-                                            {sendingMsg ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
-                                        </button>
-                                    </div>
+                                    {(selectedSignalForChat.status === 'rejected' || selectedSignalForChat.status === 'volcano_rejected') ? (
+                                        <div className="text-center py-2 border border-red-500/20 bg-red-900/10 rounded-lg">
+                                            <p className="text-[10px] text-red-500/60 uppercase tracking-widest flex items-center justify-center gap-2">
+                                                <XCircle size={12} />
+                                                CHANNEL TERMINATED - LINK SEVERED
+                                            </p>
+                                        </div>
+                                    ) : chatMessages.length === 0 ? (
+                                        <div className="text-center py-2">
+                                            <p className="text-[10px] text-green-500/40 uppercase tracking-widest flex items-center justify-center gap-2">
+                                                <Lock size={12} />
+                                                Uplink Standby - Awaiting Boardroom Initiation
+                                            </p>
+                                        </div>
+                                    ) : (
+                                        <div className="flex items-center gap-2">
+                                            <input
+                                                type="text"
+                                                value={newMessage}
+                                                onChange={(e) => setNewMessage(e.target.value)}
+                                                onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
+                                                placeholder="Type your response..."
+                                                className="flex-1 bg-black/40 border border-green-500/20 rounded-lg px-4 py-3 text-sm text-green-300 focus:outline-none focus:border-green-500/50 transition-all placeholder-green-800"
+                                            />
+                                            <button
+                                                onClick={sendMessage}
+                                                disabled={sendingMsg || !newMessage.trim()}
+                                                className="p-3 rounded-lg bg-green-600/20 hover:bg-green-600/40 border border-green-500/50 text-green-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                            >
+                                                {sendingMsg ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
 
                             </div>
+
                         </div>
                     </div>
                 )

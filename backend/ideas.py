@@ -12,7 +12,7 @@ def run_volcano_analysis(app, idea_id, company_name, title, content):
     """
     with app.app_context():
         try:
-            print(f"🌋 Volcano Active: Analyzing Signal #{idea_id} for {company_name}")
+            print(f"Volcano Active: Analyzing Signal #{idea_id} for {company_name}")
             
             # Context Retrieval (Inside Thread)
             company = Company.query.filter_by(company_name=company_name).first()
@@ -38,12 +38,12 @@ def run_volcano_analysis(app, idea_id, company_name, title, content):
             
             # Save Results
             if analysis['valid']:
-                print(f"✅ Pipeline Approved: Signal #{idea_id}")
+                print(f"Pipeline Approved: Signal #{idea_id}")
                 idea.status = 'sent_to_boardroom'
                 idea.tags = analysis.get('tags', '')
                 idea.ai_analysis_log = analysis['log']
             else:
-                print(f"❌ Pipeline Rejected: Signal #{idea_id}")
+                print(f"Pipeline Rejected: Signal #{idea_id}")
                 idea.status = 'volcano_rejected'
                 idea.ai_analysis_log = analysis['log'] + f"\n\n[FINAL REJECTION REASON]: {analysis['reason']}"
                 
@@ -56,10 +56,10 @@ def run_volcano_analysis(app, idea_id, company_name, title, content):
                 db.session.add(msg)
             
             db.session.commit()
-            print(f"🧠 Thinking Complete for Signal #{idea_id}")
+            print(f"Thinking Complete for Signal #{idea_id}")
 
         except Exception as e:
-            print(f"🔥 Volcano Core Failure: {e}")
+            print(f"Volcano Core Failure: {e}")
             # Failsafe
             with app.app_context():
                 idea = Idea.query.get(idea_id)
@@ -145,10 +145,12 @@ def get_my_ideas():
             "content": idea.content,
             "status": idea.status,
             "signal_type": idea.signal_type,
+            "company_id": company.id if company else None,
             "company_name": company.company_name if company else "Unknown",
             "company_logo_url": company.logo_url if company else None,
             "potential_value": idea.potential_value,
             "tags": idea.tags,
+            "analysis_log": idea.ai_analysis_log,
             "created_at": idea.created_at.isoformat()
         })
 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { Box, Activity, Shield, Users, Loader2, CheckCircle2, XCircle, Search, Clock, ChevronRight, User, Star, Zap, HelpCircle, Send, MessageSquare } from 'lucide-react';
 
 const BoardroomDashboard = () => {
@@ -165,7 +165,7 @@ const BoardroomDashboard = () => {
 
             {/* Top Navigation Bar */}
             <div className="w-full h-16 border-b border-white/5 bg-white/5 backdrop-blur-md flex items-center justify-between px-6 z-20">
-                <div className="flex items-center gap-3">
+                <Link to={`/boardroom/${company?.id}`} className="flex items-center gap-3 hover:opacity-80 transition-opacity">
                     {company?.logo_url ? (
                         <img src={company.logo_url} alt="Logo" className="w-8 h-8 rounded-lg shadow-lg shadow-blue-900/50 object-contain bg-white/5" />
                     ) : (
@@ -177,7 +177,7 @@ const BoardroomDashboard = () => {
                         <h1 className="font-bold text-sm tracking-wide">{company?.company_name}</h1>
                         <p className="text-[10px] text-blue-400 uppercase tracking-widest">Boardroom</p>
                     </div>
-                </div>
+                </Link>
 
                 <div className="flex items-center gap-6">
                     <div className="flex items-center gap-1 bg-black/40 rounded-lg p-1 border border-white/5">
@@ -563,7 +563,7 @@ const BoardroomDashboard = () => {
                                                     {msg.content}
                                                 </div>
                                                 <span className="text-[9px] text-white/20 mt-1 uppercase tracking-wider">
-                                                    {msg.sender_type === 'titan' ? 'Boardroom' : 'Alien'} • {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                    {msg.sender_type === 'titan' ? 'Boardroom' : 'Alien'} • {new Date(msg.created_at).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                                                 </span>
                                             </div>
                                         ))

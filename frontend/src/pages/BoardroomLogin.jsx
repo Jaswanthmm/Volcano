@@ -44,7 +44,14 @@ const BoardroomLogin = () => {
                 body: JSON.stringify(formData),
             });
 
-            const data = await response.json();
+            let data;
+            const contentType = response.headers.get("content-type");
+            if (contentType && contentType.indexOf("application/json") !== -1) {
+                data = await response.json();
+            } else {
+                const text = await response.text();
+                throw new Error(text || 'Server returned invalid response.');
+            }
 
             if (!response.ok) {
                 throw new Error(data.error || 'Connection refused by mainframe.');

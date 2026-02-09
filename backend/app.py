@@ -7,6 +7,7 @@ from auth import auth_bp
 from users import users_bp
 from messages import messages_bp
 from volcano import volcano_bp
+from companies import companies_bp
 
 app = Flask(__name__)
 # Enable CORS for all domains
@@ -27,6 +28,7 @@ app.register_blueprint(auth_bp)
 app.register_blueprint(users_bp)
 app.register_blueprint(messages_bp)
 app.register_blueprint(volcano_bp)
+app.register_blueprint(companies_bp)
 
 with app.app_context():
     db.create_all()
@@ -36,4 +38,4 @@ def home():
     return jsonify({"message": "Welcome to Aliens vs Sharks API"})
 
 if __name__ == '__main__':
-    app.run(debug=False, port=8001, host='0.0.0.0')
+    app.run(debug=True, port=8001, host='0.0.0.0')

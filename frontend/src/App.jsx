@@ -8,6 +8,8 @@ import BoardroomDashboard from './pages/BoardroomDashboard';
 import ThinkingEngine from './pages/ThinkingEngine';
 
 import ThinkingEngineLogin from './pages/ThinkingEngineLogin';
+import AlienProfile from './pages/AlienProfile';
+import CompanyProfile from './pages/CompanyProfile';
 
 function App() {
   return (
@@ -20,6 +22,10 @@ function App() {
         <Route path="/login/titan" element={<BoardroomLogin />} />
         <Route path="/alien/dashboard" element={<AlienDashboard />} />
         <Route path="/boardroom/dashboard" element={<BoardroomDashboard />} />
+
+        {/* Profile Routes */}
+        <Route path="/alien/:id" element={<AlienProfile />} />
+        <Route path="/boardroom/:id" element={<CompanyProfile />} />
 
         {/* Thinking Engine Routes */}
         <Route path="/thinking-engine/login" element={<ThinkingEngineLogin />} />

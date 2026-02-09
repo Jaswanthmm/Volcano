@@ -37,11 +37,16 @@ def get_volcano_stream():
         sender = User.query.get(idea.sender_id)
         recipient = Company.query.get(idea.recipient_company_id)
         
+        # Decouple Engine Status from Boardroom Status
+        display_status = idea.status
+        if idea.status in ['interesting', 'accepted', 'rejected']: 
+            display_status = 'sent_to_boardroom' # Visually remains "Approved" in Engine
+
         results.append({
             "id": idea.id,
             "title": idea.title,
             "content": idea.content,
-            "status": idea.status, # processing, sent_to_boardroom, volcano_rejected, etc.
+            "status": display_status,
             "signal_type": idea.signal_type,
             "sender": sender.username if sender else "Unknown",
             "recipient": recipient.company_name if recipient else "Unknown",
