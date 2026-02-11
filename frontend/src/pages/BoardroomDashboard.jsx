@@ -1,3 +1,4 @@
+// Admin interface for Companies (Titans) to review and manage signals.
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Box, Activity, Shield, Users, Loader2, CheckCircle2, XCircle, Search, Clock, ChevronRight, User, Star, Zap, HelpCircle, Send, MessageSquare } from 'lucide-react';

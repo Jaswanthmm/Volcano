@@ -1,3 +1,4 @@
+// Configuration for Vite bundler (plugins, server settings, proxies).
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 

@@ -23,10 +23,18 @@ if not exist "..\frontend\dist" (
 )
 
 echo.
-echo [3/3] Launching Production Server...
-echo Access the application at: http://localhost:8080
-echo (Press Ctrl+C to stop)
+echo [3/3] Launching Production Habitat...
 echo.
+echo ===================================================
+echo Starting API Server (Port 8080)
+start "Volcano API Core" cmd /k "label API & title Volcano API Core & ..\venv\Scripts\activate & python production.py"
 
-python production.py
+echo Starting Thinking Engine (Worker)
+start "Volcano Thinking Engine" cmd /k "label WORKER & title Volcano Thinking Engine & ..\venv\Scripts\activate & python worker.py"
+echo ===================================================
+
+echo.
+echo Services Deployed! 
+echo Dashboard: http://localhost:8080
+echo.
 pause

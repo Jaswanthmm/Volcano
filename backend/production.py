@@ -16,7 +16,7 @@ def serve_frontend(path):
         return send_from_directory(frontend_dist_path, 'index.html')
 
 if __name__ == "__main__":
-    print(f"✅ Starting Production Server at http://0.0.0.0:8080")
-    print(f"📦 Serving Frontend from: {frontend_dist_path}")
-    print(f"🚀 API ready at /api/...")
+    print(f"[INFO] Starting Production Server at http://0.0.0.0:8080")
+    print(f"[INFO] Serving Frontend from: {frontend_dist_path}")
+    print(f"[INFO] API ready at /api/...")
     serve(app, host='0.0.0.0', port=8080)

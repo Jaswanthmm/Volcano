@@ -1,8 +1,9 @@
+// Public profile page for Companies (displaying mission and signal history).
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Building2, Shield, Globe, ArrowLeft, TrendingUp, CheckCircle2, Clock, DollarSign } from 'lucide-react';
 
-const CompanyProfile = () => {
+const BoardroomProfile = () => {
     const { id } = useParams();
     const navigate = useNavigate();
     const [company, setCompany] = useState(null);
@@ -191,4 +192,4 @@ const StatBadge = ({ label, value, color = "text-white" }) => (
     </div>
 );
 
-export default CompanyProfile;
+export default BoardroomProfile;

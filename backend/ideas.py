@@ -1,72 +1,11 @@
+# API routes for submitting, retrieving, and managing ideas (signals).
 from flask import Blueprint, request, jsonify, current_app
 from models import db, Idea, User, Company, Message
-from agents import run_pipeline
-import threading
+from agents import run_pipeline # This line is kept as per the provided example, though the comment suggests it might move.
+# Threading removed in favor of worker process
+# from agents import run_pipeline (Moved to worker.py)
 
 ideas_bp = Blueprint('ideas', __name__, url_prefix='/api/ideas')
-
-def run_volcano_analysis(app, idea_id, company_name, title, content):
-    """
-    Background Task: The 'Thinking Engine' Pipeline.
-    Now powered by Multi-Agent Swarm logic.
-    """
-    with app.app_context():
-        try:
-            print(f"Volcano Active: Analyzing Signal #{idea_id} for {company_name}")
-            
-            # Context Retrieval (Inside Thread)
-            company = Company.query.filter_by(company_name=company_name).first()
-            if not company:
-                print("Error: Company not found in background thread")
-                return
-
-            idea = Idea.query.get(idea_id)
-            if not idea: 
-                return
-
-            recent_ideas = Idea.query.filter_by(recipient_company_id=company.id)\
-                .filter(Idea.id != idea_id)\
-                .order_by(Idea.created_at.desc()).limit(20).all()
-            
-            recent_context = [f"Title: {i.title}, Content: {i.content}, Status: {i.status}" for i in recent_ideas]
-
-            # --- RUN AGENT PIPELINE ---
-            analysis = run_pipeline(title, content, company_name, recent_context, idea.signal_type, idea_id=idea.id)
-            
-            # Refetch idea to lock for update (safeguard)
-            idea = Idea.query.get(idea_id)
-            
-            # Save Results
-            if analysis['valid']:
-                print(f"Pipeline Approved: Signal #{idea_id}")
-                idea.status = 'sent_to_boardroom'
-                idea.tags = analysis.get('tags', '')
-                idea.ai_analysis_log = analysis['log']
-            else:
-                print(f"Pipeline Rejected: Signal #{idea_id}")
-                idea.status = 'volcano_rejected'
-                idea.ai_analysis_log = analysis['log'] + f"\n\n[FINAL REJECTION REASON]: {analysis['reason']}"
-                
-                # Feedback Message
-                msg = Message(
-                    idea_id=idea.id,
-                    sender_type='volcano', 
-                    content=f"COGNITIVE CORE ALERT: {analysis['reason']}"
-                )
-                db.session.add(msg)
-            
-            db.session.commit()
-            print(f"Thinking Complete for Signal #{idea_id}")
-
-        except Exception as e:
-            print(f"Volcano Core Failure: {e}")
-            # Failsafe
-            with app.app_context():
-                idea = Idea.query.get(idea_id)
-                if idea:
-                    idea.status = 'volcano_rejected'
-                    idea.ai_analysis_log = f"SYSTEM ERROR: {str(e)}"
-                    db.session.commit()
 
 @ideas_bp.route('/submit', methods=['POST'])
 def submit_idea():
@@ -90,36 +29,26 @@ def submit_idea():
     if not company:
         return jsonify({"error": "Target Boardroom not found"}), 404
 
-    # 3. Create 'Processing' Idea using valid SQLAlchemy model status
-    # Note: 'processing' status might effectively mean 'pending' until changed, 
-    # but we will use 'processing' to denote "At Volcano".
+    # 3. Create 'Queued' Idea for Worker Process
     new_idea = Idea(
         title=title,
         content=content,
         sender_id=sender.id,
         recipient_company_id=company.id,
         signal_type=signal_type,
-        status='processing', # Initial State
+        status='queued', # Waiting for worker.py
         is_useful=False, 
-        potential_value="Analyzing...",
-        tags="Verifying..."
+        potential_value="Queued...",
+        tags="Pending Analysis..."
     )
 
     db.session.add(new_idea)
     db.session.commit()
 
-    # 4. Spawn Background Thread (Async Intelligence)
-    # Pass 'current_app._get_current_object()' to allow thread to access app_context
-    app_instance = current_app._get_current_object()
-    threading.Thread(
-        target=run_volcano_analysis, 
-        args=(app_instance, new_idea.id, company_name, title, content)
-    ).start()
-
     return jsonify({
-        "message": "Signal intercepted by Volcano. Processing started.",
+        "message": "Signal queued for Volcano analysis.",
         "signal_id": new_idea.id,
-        "status": "processing",
+        "status": "queued",
         "signal_type": signal_type
     }), 201
 

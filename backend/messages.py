@@ -1,3 +1,4 @@
+# API routes for messaging between Aliens and Boardrooms (Titans).
 from flask import Blueprint, request, jsonify
 from models import db, Message, Idea, Company, User
 from datetime import datetime

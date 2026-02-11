@@ -1,3 +1,4 @@
+# Specialized AI agents for processing Bug Reports (QA Engineer, Engineering Manager).
 import os
 import json
 from google import genai

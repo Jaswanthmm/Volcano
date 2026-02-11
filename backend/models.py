@@ -1,3 +1,4 @@
+# SQLAlchemy database models for User, Company, Idea, and Message entities.
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 
@@ -8,7 +9,7 @@ class User(db.Model):
     username = db.Column(db.String(80), unique=True, nullable=False)
     name = db.Column(db.String(100), nullable=True) # Actual name of the Alien
     email = db.Column(db.String(120), unique=True, nullable=False)
-    password_hash = db.Column(db.String(128))
+    password_hash = db.Column(db.String(255))
     is_verified = db.Column(db.Boolean, default=False)
     # ideas = db.relationship('Idea', backref='author', lazy=True)
 
@@ -16,7 +17,7 @@ class Company(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     company_name = db.Column(db.String(120), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
-    password_hash = db.Column(db.String(128))
+    password_hash = db.Column(db.String(255))
     is_verified = db.Column(db.Boolean, default=False)
     logo_url = db.Column(db.String(500)) # URL to company logo
     website_url = db.Column(db.String(200), unique=True) # Official company website

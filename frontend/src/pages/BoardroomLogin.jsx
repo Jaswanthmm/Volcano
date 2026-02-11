@@ -1,3 +1,4 @@
+// Authentication page for Boardroom Titans (Register/Login).
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Box, Lock, ArrowRight, Shield, Building, AlertCircle, Eye, EyeOff } from 'lucide-react';

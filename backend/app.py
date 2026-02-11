@@ -1,3 +1,4 @@
+# Core Flask application entry point, configuration, and blueprint registration.
 import os
 from flask import Flask, jsonify
 from flask_cors import CORS
@@ -19,7 +20,15 @@ def internal_error(e):
     return jsonify({"error": "Internal Server Error", "details": str(e)}), 500
 
 basedir = os.path.abspath(os.path.dirname(__file__))
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'ideas.db')
+
+# Database Config
+# Check for DATABASE_URL in env (e.g. Postgres), otherwise default to SQLite
+database_url = os.getenv('DATABASE_URL')
+if database_url and database_url.startswith("postgres"):
+    app.config['SQLALCHEMY_DATABASE_URI'] = database_url
+else:
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'ideas.db')
+
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db.init_app(app)
@@ -33,9 +42,9 @@ app.register_blueprint(companies_bp)
 with app.app_context():
     db.create_all()
 
-@app.route('/')
-def home():
-    return jsonify({"message": "Welcome to Aliens vs Sharks API"})
+# @app.route('/')
+# def home():
+#     return jsonify({"message": "Welcome to Aliens vs Sharks API"})
 
 if __name__ == '__main__':
     app.run(debug=True, port=8001, host='0.0.0.0')

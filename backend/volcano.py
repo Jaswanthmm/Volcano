@@ -1,3 +1,4 @@
+# API routes for the Volcano Thinking Engine visualization and stats.
 from flask import Blueprint, jsonify
 from models import Idea, Company, User
 from sqlalchemy import desc

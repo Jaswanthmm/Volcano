@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+// Main interface for Aliens to submit ideas and view their status.
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Radio, Send, Database, Shield, LogOut, Loader2, AlertTriangle, CheckCircle2, User, MessageSquare, XCircle, HelpCircle, Activity, Lock } from 'lucide-react';
 
@@ -542,13 +543,7 @@ const AlienDashboard = () => {
                                 </div>
                                 <div className="flex-1 overflow-hidden relative">
                                     <div className="absolute inset-0 overflow-y-auto text-sm text-green-300/60 leading-relaxed pr-2 custom-scrollbar whitespace-pre-wrap">
-                                        {selectedSignalForChat.status === 'volcano_rejected' ? (
-                                            <span className="text-red-400/80 font-mono text-xs">
-                                                {selectedSignalForChat.analysis_log || "No analysis log available."}
-                                            </span>
-                                        ) : (
-                                            selectedSignalForChat.content
-                                        )}
+                                        {selectedSignalForChat.content}
                                     </div>
                                 </div>
                             </div>

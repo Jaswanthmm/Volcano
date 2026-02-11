@@ -1,3 +1,4 @@
+// Visualization component for the AI "Thinking Engine" processing nodes.
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BrainCircuit, Activity, ShieldAlert, Cpu, CheckCircle2, XCircle, Clock, Server, Eye, Zap } from 'lucide-react';
@@ -10,6 +11,7 @@ const ThinkingEngine = () => {
     const [loading, setLoading] = useState(true);
     const [activeLog, setActiveLog] = useState(null); // Moved up
 
+    /*
     useEffect(() => {
         try {
             const token = localStorage.getItem('thinking_engine_token');
@@ -21,6 +23,7 @@ const ThinkingEngine = () => {
             navigate('/thinking-engine/login');
         }
     }, [navigate]);
+    */
 
     const fetchData = async () => {
         try {
@@ -29,7 +32,10 @@ const ThinkingEngine = () => {
                 fetch('/api/volcano/stats')
             ]);
 
-            if (streamRes.ok) setStream(await streamRes.json());
+            if (streamRes.ok) {
+                const streamData = await streamRes.json();
+                setStream(Array.isArray(streamData) ? streamData : []);
+            }
             if (statsRes.ok) setStats(await statsRes.json());
             setLoading(false);
         } catch (err) {

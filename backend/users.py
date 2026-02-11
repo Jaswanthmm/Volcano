@@ -1,4 +1,5 @@
-from flask import Blueprint, jsonify
+# API routes for User (Alien) profile management and stats.
+from flask import Blueprint, jsonify, request
 from models import db, User, Idea, Company
 
 users_bp = Blueprint('users', __name__, url_prefix='/api/users')

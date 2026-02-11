@@ -1,3 +1,4 @@
+// Tailwind CSS configuration (theme customization, content paths).
 /** @type {import('tailwindcss').Config} */
 export default {
     content: [

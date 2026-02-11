@@ -1,3 +1,4 @@
+// Restricted login for the Thinking Engine visualization (Admins only).
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BrainCircuit, Lock, Key, AlertTriangle } from 'lucide-react';

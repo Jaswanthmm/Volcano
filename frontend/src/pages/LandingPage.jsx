@@ -1,327 +1,356 @@
+
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Globe, File, Lock, DollarSign, User, Activity, Box, Shield, Check, DivideCircle } from 'lucide-react';
+import {
+  Lightbulb, CheckCircle2, Building2, DollarSign,
+  ArrowRight, Shield, Zap, TrendingUp, Users, Lock,
+  Activity, Code
+} from 'lucide-react';
 
 const LandingPage = () => {
-  const [tickerIndex, setTickerIndex] = useState(0);
-  const [hoveredSide, setHoveredSide] = useState(null);
-  const [scrolled, setScrolled] = useState(false);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
 
-  const SYSTEM_LOGS = [
-    "PROTOCOL_ACTIVE: Alien Transmission Sync (0x8F2)",
-    "EXCHANGE_VOLUME: $18.2M Disbursed in Q4",
-    "ENTITY_VETTING: Neural filters at 99.98% accuracy",
-    "MARKET_ALERT: High demand for 'Sustainable Logic' Innovation",
-    "NODE_STATUS: Alien edge network optimal"
-  ];
-
-  const STATS = [
-    { label: "Active Aliens", value: "9,429", icon: <Globe size={24} /> },
-    { label: "Ideas Transferred", value: "8,204", icon: <File size={24} /> },
-    { label: "Capital Disbursed", value: "$12.4M", icon: <Lock size={24} /> },
-    { label: "Active Boardrooms", value: "1,204", icon: <Box size={24} /> }
-  ];
-
   useEffect(() => {
-    const interval = setInterval(() => {
-      setTickerIndex((prev) => (prev + 1) % SYSTEM_LOGS.length);
-    }, 5000);
-
-    const handleScroll = () => setScrolled(window.scrollY > 50);
-    window.addEventListener('scroll', handleScroll);
-
     const handleMouseMove = (e) => {
       setMousePos({ x: e.clientX, y: e.clientY });
     };
     window.addEventListener('mousemove', handleMouseMove);
 
+    // --- SIGNAL NETWORK ANIMATION ---
+    const canvas = document.getElementById('signal-network');
+    const ctx = canvas.getContext('2d');
+    let width, height;
+    let nodes = [];
+    let lines = [];
+    let signals = [];
+    let animationFrameId;
+
+    const initNetwork = () => {
+      width = canvas.width = window.innerWidth;
+      height = canvas.height = window.innerHeight;
+      nodes = [];
+      lines = [];
+      signals = [];
+
+      // Create Nodes
+      const nodeCount = Math.floor((width * height) / 25000); // Density
+      for (let i = 0; i < nodeCount; i++) {
+        nodes.push({
+          x: Math.random() * width,
+          y: Math.random() * height
+        });
+      }
+
+      // Create Connections (Proximity)
+      for (let i = 0; i < nodes.length; i++) {
+        for (let j = i + 1; j < nodes.length; j++) {
+          const dx = nodes[i].x - nodes[j].x;
+          const dy = nodes[i].y - nodes[j].y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < 150) { // Connection threshold
+            lines.push({ p1: i, p2: j, dist });
+          }
+        }
+      }
+    };
+
+    const draw = () => {
+      ctx.clearRect(0, 0, width, height);
+
+      // Draw Lines
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+      ctx.lineWidth = 1;
+      lines.forEach(line => {
+        ctx.beginPath();
+        ctx.moveTo(nodes[line.p1].x, nodes[line.p1].y);
+        ctx.lineTo(nodes[line.p2].x, nodes[line.p2].y);
+        ctx.stroke();
+      });
+
+      // Draw Nodes
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+      nodes.forEach(node => {
+        ctx.beginPath();
+        ctx.arc(node.x, node.y, 1.5, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      // Manage Signals
+      if (Math.random() < 0.05) { // Spawn rate
+        const randomLine = lines[Math.floor(Math.random() * lines.length)];
+        if (randomLine) {
+          signals.push({
+            line: randomLine,
+            progress: 0,
+            speed: 0.005 + Math.random() * 0.01 // Slow motion speed
+          });
+        }
+      }
+
+      // Update & Draw Signals
+      for (let i = signals.length - 1; i >= 0; i--) {
+        const s = signals[i];
+        s.progress += s.speed;
+
+        if (s.progress >= 1) {
+          signals.splice(i, 1);
+          continue;
+        }
+
+        const p1 = nodes[s.line.p1];
+        const p2 = nodes[s.line.p2];
+        const x = p1.x + (p2.x - p1.x) * s.progress;
+        const y = p1.y + (p2.y - p1.y) * s.progress;
+
+        // Draw Glow
+        const gradient = ctx.createRadialGradient(x, y, 0, x, y, 4);
+        gradient.addColorStop(0, 'rgba(239, 68, 68, 1)'); // Red Core
+        gradient.addColorStop(1, 'rgba(239, 68, 68, 0)'); // Fade
+        ctx.fillStyle = gradient;
+        ctx.beginPath();
+        ctx.arc(x, y, 4, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      animationFrameId = requestAnimationFrame(draw);
+    };
+
+    initNetwork();
+    draw();
+
+    const handleResize = () => initNetwork();
+    window.addEventListener('resize', handleResize);
+
     return () => {
-      clearInterval(interval);
-      window.removeEventListener('scroll', handleScroll);
       window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('resize', handleResize);
+      cancelAnimationFrame(animationFrameId);
     };
   }, []);
 
   return (
-    <div className="relative min-h-screen text-white bg-black overflow-x-hidden selection:bg-green-500 selection:text-black">
+    <div className="min-h-screen bg-black text-white font-sans selection:bg-red-500 selection:text-white overflow-x-hidden">
 
-      {/* Dynamic Background */}
-      <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
-        {/* Spotlight Effect */}
+      {/* --- BACKGROUND --- */}
+      <div className="fixed inset-0 pointer-events-none z-0">
+        <div className="absolute inset-0 bg-black" />
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(220,38,38,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(220,38,38,0.05)_1px,transparent_1px)] bg-[size:100px_100px] opacity-20"></div>
+        <canvas id="signal-network" className="absolute inset-0 w-full h-full opacity-40" />
         <div
-          className="absolute inset-0 z-0 transition-opacity duration-500"
+          className="absolute inset-0"
           style={{
-            background: `radial-gradient(600px circle at ${mousePos.x}px ${mousePos.y}px, rgba(29, 78, 216, 0.15), transparent 80%)`
+            background: `radial-gradient(circle items-center at ${mousePos.x}px ${mousePos.y}px, rgba(220, 38, 38, 0.15) 0%, transparent 50%)`
           }}
         />
-
-        {/* Animated Grid */}
-        <div className="absolute inset-0 opacity-20"
-          style={{
-            backgroundImage: 'linear-gradient(#333 1px, transparent 1px), linear-gradient(90deg, #333 1px, transparent 1px)',
-            backgroundSize: '50px 50px',
-            transform: 'perspective(500px) rotateX(60deg) translateY(-100px) scale(3)',
-            transformOrigin: 'top center',
-            maskImage: 'linear-gradient(to bottom, transparent, black 10%, black 90%, transparent)'
-          }}>
-        </div>
-
-        {/* Floating Particles/Nodes */}
-        {[...Array(20)].map((_, i) => (
-          <div
-            key={i}
-            className="absolute rounded-full bg-white/10 animate-float blur-sm"
-            style={{
-              top: `${Math.random() * 100}vh`,
-              left: `${Math.random() * 100}vw`,
-              width: `${Math.random() * 4 + 1}px`,
-              height: `${Math.random() * 4 + 1}px`,
-              animationDelay: `${Math.random() * 20}s`,
-              animationDuration: `${10 + Math.random() * 20}s`
-            }}
-          />
-        ))}
-
-        {/* Subtle Gradient Spots */}
-        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-purple-900/20 blur-[120px] rounded-full animate-pulse"></div>
-        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-900/20 blur-[120px] rounded-full animate-pulse" style={{ animationDelay: '2s' }}></div>
       </div>
 
-      {/* Dynamic Header Badge */}
-      <div className="relative z-10 pt-24 md:pt-32 flex justify-center px-6">
-        <div className="inline-flex items-center gap-3 px-4 py-2 rounded-full glass border-white/10 animate-fadeInUp">
-          <span className="relative flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-orange-500"></span>
-          </span>
-          <span className="text-[10px] font-black tracking-[0.4em] uppercase text-white/60">Feel the heat of innovation</span>
-        </div>
-      </div>
-
-      {/* Hero Section */}
-      <section className="relative z-10 px-6 pt-12 pb-20 md:pb-32 text-center max-w-7xl mx-auto overflow-hidden">
-        <h1 className="text-5xl sm:text-7xl md:text-9xl lg:text-[11rem] font-space font-extrabold leading-[1] tracking-tightest mb-8 md:mb-12 animate-fadeInUp" style={{ animationDelay: '0.1s' }}>
-          VOLCANO
-        </h1>
-
-        <p className="text-base sm:text-xl md:text-2xl text-gray-400 max-w-3xl mx-auto mb-16 md:mb-24 leading-relaxed font-light px-4 animate-fadeInUp" style={{ animationDelay: '0.2s' }}>
-          Standardizing the interface between <span className="text-white font-medium">outlier intelligence</span> and <span className="text-white font-medium">industrial scale</span>. Secure, anonymous, and impactful.
-        </p>
-
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-6 md:gap-8 px-6 animate-fadeInUp" style={{ animationDelay: '0.3s' }}>
-          <Link to="/login/alien" className="w-full sm:w-auto px-10 py-5 bg-white text-black rounded-full font-black text-xs uppercase tracking-[0.3em] transition-all hover:scale-105 active:scale-95 shadow-[0_0_30px_rgba(255,255,255,0.1)]">
-            Login as Alien
-          </Link>
-          <Link to="/login/boardroom" className="w-full sm:w-auto px-10 py-5 glass border-white/20 rounded-full font-black text-xs uppercase tracking-[0.3em] hover:bg-white/5 transition-all hover:scale-105 active:scale-95">
-            Enter Boardroom
-          </Link>
-        </div>
-      </section>
-
-      {/* Network Stats Section */}
-      <section className="relative z-10 py-20 px-6 max-w-7xl mx-auto border-y border-white/5 bg-white/[0.01]">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-12">
-          {STATS.map((stat, idx) => (
-            <div key={idx} className="text-center group animate-fadeInUp" style={{ animationDelay: `${0.1 * idx}s` }}>
-              <div className="text-white/20 flex justify-center mb-4 transition-colors group-hover:text-white/60">
-                {stat.icon}
-              </div>
-              <div className="text-2xl md:text-4xl font-space font-bold tracking-tight mb-2">{stat.value}</div>
-              <div className="text-[9px] font-black uppercase tracking-[0.3em] text-gray-600">{stat.label}</div>
+      {/* --- NAV --- */}
+      <nav className="fixed top-0 w-full z-50 border-b border-white/10 bg-black/80 backdrop-blur-md">
+        <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="relative flex h-3 w-3">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-red-600"></span>
             </div>
-          ))}
-        </div>
-      </section>
-
-      {/* Interactive Protocol Selector */}
-      <section className="relative z-10 py-32 px-6 max-w-7xl mx-auto">
-        <div className="text-center mb-20 md:mb-32">
-          <h2 className="text-[10px] font-black uppercase tracking-[0.8em] text-white/20 mb-6">Choose Your Protocol</h2>
-          <div className="h-[1px] w-12 mx-auto bg-white/20"></div>
-        </div>
-
-        <div className="glass rounded-[2rem] md:rounded-[4rem] border-white/5 overflow-hidden grid grid-cols-1 md:grid-cols-2 relative shadow-2xl">
-
-          {/* Vertical Divider */}
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1px] h-full bg-white/5 hidden md:block z-20">
-            <div className="w-full h-1/4 bg-white/40 animate-scanline absolute top-0"></div>
+            <span className="text-xl font-bold tracking-tighter">VOLCANO</span>
           </div>
-
-          {/* ALIEN SIDE */}
-          <div
-            className={`relative p-10 md:p-24 nexus-transition cursor-default group border-b md:border-b-0 md:border-r border-white/5 ${hoveredSide === 'alien' ? 'bg-purple-500/[0.03]' : ''}`}
-            onMouseEnter={() => setHoveredSide('alien')}
-            onMouseLeave={() => setHoveredSide(null)}
-          >
-            <div className="relative z-10">
-              <div className="flex items-center gap-6 mb-12">
-                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-2xl nexus-transition ${hoveredSide === 'alien' ? 'alien-gradient text-white shadow-[0_0_40px_rgba(168,85,247,0.4)] scale-110' : 'bg-white/5 text-white/20'}`}>
-                  <User size={28} />
-                </div>
-                <div>
-                  <span className="text-[9px] font-black uppercase tracking-[0.4em] text-purple-400 block mb-1">Status: Vanguard</span>
-                  <h3 className="text-3xl md:text-5xl font-space font-bold tracking-tight">ALIEN</h3>
-                </div>
-              </div>
-
-              <p className="text-lg text-gray-500 leading-relaxed mb-12 font-light">
-                For the architects of the unusual. Canalize your raw innovation into tangible impact. Scale your value without compromising your sovereignty.
-              </p>
-
-              <div className="space-y-8">
-                {[
-                  { label: "Impact", val: "On Real World", icon: <Shield size={16} /> },
-                  { label: "Value", val: "Where it Counts", icon: <DivideCircle size={16} /> }
-                ].map((item, idx) => (
-                  <div key={idx} className={`flex items-center gap-4 transition-all duration-700 ${hoveredSide === 'alien' ? 'translate-x-2 opacity-100' : 'opacity-40'}`}>
-                    <div className="w-8 h-8 rounded-full border border-purple-500/20 flex items-center justify-center text-[10px] text-purple-400">
-                      {item.icon}
-                    </div>
-                    <div>
-                      <div className="text-[8px] font-black uppercase tracking-widest text-gray-600 mb-1">{item.label}</div>
-                      <div className="text-sm font-bold">{item.val}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+          <div className="hidden md:flex gap-8 text-xs font-bold uppercase tracking-widest text-white/60">
+            <a href="#how-it-works" className="hover:text-red-500 transition-colors">How It Works</a>
+            <a href="#protocols" className="hover:text-red-500 transition-colors">Protocols</a>
           </div>
-
-          {/* BOARDROOM SIDE */}
-          <div
-            className={`relative p-10 md:p-24 nexus-transition cursor-default group ${hoveredSide === 'boardroom' ? 'bg-sky-500/[0.03]' : ''}`}
-            onMouseEnter={() => setHoveredSide('boardroom')}
-            onMouseLeave={() => setHoveredSide(null)}
-          >
-            <div className="relative z-10">
-              <div className="flex items-center gap-6 mb-12">
-                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-2xl nexus-transition ${hoveredSide === 'boardroom' ? 'titan-gradient text-white shadow-[0_0_40px_rgba(14,165,233,0.4)] scale-110' : 'bg-white/5 text-white/20'}`}>
-                  <Box size={28} />
-                </div>
-                <div>
-                  <span className="text-[9px] font-black uppercase tracking-[0.4em] text-sky-400 block mb-1">Status: Industrial</span>
-                  <h3 className="text-3xl md:text-5xl font-space font-bold tracking-tight">BOARDROOM</h3>
-                </div>
-              </div>
-
-              <p className="text-lg text-gray-500 leading-relaxed mb-12 font-light">
-                For industrial architects. Harness outlier innovation to fuel exponential growth. Bypass internal friction and scale your competitive advantage.
-              </p>
-
-              <div className="space-y-8">
-                {[
-                  { label: "Efficiency", val: "Pre-Vetted Flow", icon: <Check size={16} /> },
-                  { label: "Innovation Capture", val: "At your Fingertips", icon: <Lock size={16} /> }
-                ].map((item, idx) => (
-                  <div key={idx} className={`flex items-center gap-4 transition-all duration-700 ${hoveredSide === 'boardroom' ? '-translate-x-2 opacity-100' : 'opacity-40'}`}>
-                    <div className="w-8 h-8 rounded-full border border-sky-500/20 flex items-center justify-center text-[10px] text-sky-400">
-                      {item.icon}
-                    </div>
-                    <div>
-                      <div className="text-[8px] font-black uppercase tracking-widest text-gray-600 mb-1">{item.label}</div>
-                      <div className="text-sm font-bold">{item.val}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Final Action Area */}
-      <section className="relative z-10 py-40 px-6 text-center bg-white/[0.02] border-t border-white/5">
-        <div className="max-w-4xl mx-auto">
-          <h2 className="text-4xl md:text-7xl font-space font-black tracking-tightest mb-12 uppercase leading-none">
-            Scale the <br className="hidden md:block" /> Impossible.
-          </h2>
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
-            <Link to="/login/alien" className="w-full sm:w-auto px-12 py-6 alien-gradient rounded-full font-black text-xs uppercase tracking-[0.4em] shadow-xl hover:scale-105 transition-all">
+          <div className="flex gap-4">
+            <Link to="/login/alien" className="px-5 py-2 bg-white/5 hover:bg-white/10 border border-white/10 text-white text-xs font-bold uppercase tracking-wider rounded transition-colors">
               Login as Alien
             </Link>
-            <Link to="/login/boardroom" className="w-full sm:w-auto px-12 py-6 glass border-white/10 rounded-full font-black text-xs uppercase tracking-[0.4em] hover:bg-white/10 transition-all">
+            <Link to="/login/boardroom" className="px-5 py-2 border border-white/20 hover:bg-white/10 text-white text-xs font-bold uppercase tracking-wider rounded transition-colors">
               Enter Boardroom
             </Link>
           </div>
         </div>
+      </nav>
+
+      {/* --- HERO --- */}
+      <section className="relative z-10 pt-28 md:pt-40 pb-20 px-6 max-w-7xl mx-auto text-center">
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded border border-red-500/30 bg-red-500/10 text-red-500 text-[10px] font-bold uppercase tracking-widest mb-8">
+          <Activity size={12} />
+          <span>Feel the heat of innovation</span>
+        </div>
+
+        <h1 className="text-5xl md:text-7xl lg:text-8xl font-black tracking-tight leading-none mb-8">
+          MONETIZE<br />
+          <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-500 via-orange-500 to-red-600">YOUR MIND.</span>
+        </h1>
+
+        <p className="text-xl text-gray-400 max-w-2xl mx-auto mb-12 font-light">
+          The marketplace for outlier intelligence. <br className="hidden md:block" />
+        </p>
+
+        <div className="flex flex-col sm:flex-row justify-center gap-4">
+          <Link to="/login/alien" className="group px-8 py-4 bg-transparent border border-white/10 text-white font-bold uppercase tracking-widest text-xs rounded hover:border-green-500 transition-all flex items-center justify-center gap-2">
+            Login as Alien <ArrowRight size={16} className="group-hover:translate-x-1 group-hover:text-green-500 transition-all" />
+          </Link>
+          <Link to="/login/boardroom" className="group px-8 py-4 bg-transparent border border-white/10 text-white font-bold uppercase tracking-widest text-xs rounded hover:border-blue-500 transition-all flex items-center justify-center gap-2">
+            Enter Boardroom <ArrowRight size={16} className="group-hover:translate-x-1 group-hover:text-blue-500 transition-all" />
+          </Link>
+        </div>
       </section>
 
-      {/* Enhanced Footer */}
-      <footer className="relative z-10 bg-black/80 border-t border-white/5 pt-20 pb-32 px-6 backdrop-blur-xl">
-        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-12 md:gap-24">
+      {/* --- THE PIPELINE (VALUE EXCHANGE) --- */}
+      <section id="how-it-works" className="relative z-10 py-24 px-6 bg-white/[0.02]">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-xs font-bold uppercase tracking-[0.3em] text-red-500 mb-2">The Value Pipeline</h2>
+            <h3 className="text-3xl font-bold">From Insight to Income</h3>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 relative">
+            {/* Connecting Line (Desktop) */}
+            <div className="hidden md:block absolute top-12 left-0 w-full h-0.5 bg-gradient-to-r from-transparent via-red-500/50 to-transparent z-0"></div>
+
+            {/* Step 1 */}
+            <div className="relative z-10 bg-black border border-white/10 p-8 rounded-xl text-center group hover:border-red-500/50 transition-colors">
+              <div className="w-16 h-16 mx-auto bg-gray-900 rounded-full border border-white/10 flex items-center justify-center mb-6 text-white group-hover:text-red-400 group-hover:scale-110 transition-all">
+                <Lightbulb size={32} />
+              </div>
+              <h4 className="text-lg font-bold mb-2">1. Valid Signal</h4>
+              <p className="text-sm text-gray-500">You submit a raw observation, idea, or solution anonymously.</p>
+            </div>
+
+            {/* Step 2 */}
+            <div className="relative z-10 bg-black border border-white/10 p-8 rounded-xl text-center group hover:border-red-500/50 transition-colors">
+              <div className="w-16 h-16 mx-auto bg-gray-900 rounded-full border border-white/10 flex items-center justify-center mb-6 text-white group-hover:text-red-400 group-hover:scale-110 transition-all">
+                <Shield size={32} />
+              </div>
+              <h4 className="text-lg font-bold mb-2">2. Volcano Vetting</h4>
+              <p className="text-sm text-gray-500">Our Thinking Engine filters noise and verifies value potential.</p>
+            </div>
+
+            {/* Step 3 */}
+            <div className="relative z-10 bg-black border border-white/10 p-8 rounded-xl text-center group hover:border-red-500/50 transition-colors">
+              <div className="w-16 h-16 mx-auto bg-gray-900 rounded-full border border-white/10 flex items-center justify-center mb-6 text-white group-hover:text-red-400 group-hover:scale-110 transition-all">
+                <Building2 size={32} />
+              </div>
+              <h4 className="text-lg font-bold mb-2">3. Corporate Match</h4>
+              <p className="text-sm text-gray-500">We route your insight to the specific Boardroom that needs it.</p>
+            </div>
+
+            {/* Step 4 */}
+            <div className="relative z-10 bg-black border border-white/10 p-8 rounded-xl text-center group hover:border-red-500/50 transition-colors">
+              <div className="w-16 h-16 mx-auto bg-gray-900 rounded-full border border-white/10 flex items-center justify-center mb-6 text-white group-hover:text-red-400 group-hover:scale-110 transition-all">
+                <DollarSign size={32} />
+              </div>
+              <h4 className="text-lg font-bold mb-2">4. Instant Payout</h4>
+              <p className="text-sm text-gray-500">The company pays for the solution. You get paid immediately.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* --- DUAL PATHS (RETAINED COLORS) --- */}
+      <section id="protocols" className="relative z-10 py-24 px-6 max-w-7xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+
+          {/* Path: Alien */}
+          <div className="border border-white/10 rounded-2xl p-10 bg-gradient-to-b from-white/5 to-transparent hover:border-green-500/30 transition-all group">
+            <div className="flex items-center gap-4 mb-8">
+              <Users size={32} className="text-green-500" />
+              <h3 className="text-2xl font-bold">For Aliens</h3>
+            </div>
+            <ul className="space-y-4 mb-8 text-gray-400">
+              <li className="flex items-center gap-3">
+                <CheckCircle2 size={16} className="text-green-500" />
+                <span>Zero corporate politics. Just value.</span>
+              </li>
+              <li className="flex items-center gap-3">
+                <CheckCircle2 size={16} className="text-green-500" />
+                <span>Anonymous contribution.</span>
+              </li>
+              <li className="flex items-center gap-3">
+                <CheckCircle2 size={16} className="text-green-500" />
+                <span>Market-rate compensation.</span>
+              </li>
+            </ul>
+            <Link to="/login/alien" className="group inline-flex w-full items-center justify-center gap-2 py-4 text-center bg-transparent border border-white/10 text-white font-bold uppercase tracking-widest text-xs rounded hover:border-green-500 hover:text-green-500 transition-all">
+              Join the Network <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
+            </Link>
+          </div>
+
+          {/* Path: Boardroom */}
+          <div className="border border-white/10 rounded-2xl p-10 bg-gradient-to-b from-white/5 to-transparent hover:border-blue-500/30 transition-all group">
+            <div className="flex items-center gap-4 mb-8">
+              <Building2 size={32} className="text-blue-500" />
+              <h3 className="text-2xl font-bold">For Boardrooms</h3>
+            </div>
+            <ul className="space-y-4 mb-8 text-gray-400">
+              <li className="flex items-center gap-3">
+                <CheckCircle2 size={16} className="text-blue-500" />
+                <span>Access filtered, high-alpha Intel.</span>
+              </li>
+              <li className="flex items-center gap-3">
+                <CheckCircle2 size={16} className="text-blue-500" />
+                <span>Vetted by Volcano Thinking Engine.</span>
+              </li>
+              <li className="flex items-center gap-3">
+                <CheckCircle2 size={16} className="text-blue-500" />
+                <span>Pay only for actionable solutions.</span>
+              </li>
+            </ul>
+            <Link to="/login/boardroom" className="group inline-flex w-full items-center justify-center gap-2 py-4 text-center bg-transparent border border-white/10 text-white font-bold uppercase tracking-widest text-xs rounded hover:border-blue-500 hover:text-blue-500 transition-all">
+              Access Intelligence <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
+            </Link>
+          </div>
+
+        </div>
+      </section>
+
+      {/* --- FOOTER --- */}
+      <footer className="border-t border-white/10 bg-black pt-16 pb-8 text-xs font-mono">
+        <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
+          {/* Brand */}
           <div className="col-span-1 md:col-span-2">
-            <h3 className="text-2xl font-space font-bold mb-6">VOLCANO</h3>
-            <p className="text-gray-500 font-light leading-relaxed max-w-sm">
-              The neural interface for outlier innovation. Connecting the fringe to the core.
+            <div className="flex items-center gap-3 mb-4">
+              <span className="relative flex h-3 w-3">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-red-600"></span>
+              </span>
+              <span className="text-xl font-bold tracking-tighter text-white">VOLCANO</span>
+            </div>
+            <p className="text-gray-500 max-w-sm">
+              The decentralized marketplace for high-value corporate intelligence.
+              Connecting outlier minds with boardroom problems.
             </p>
           </div>
 
+          {/* Links */}
           <div>
-            <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-white/40 mb-8">Alien Protocol</h4>
-            <ul className="space-y-4 text-sm font-light text-gray-400">
-              <li><Link to="/login/alien" className="hover:text-green-400 transition-colors">Node Registration</Link></li>
-              <li><a href="#" className="hover:text-green-400 transition-colors">Signal Submission</a></li>
-              <li><a href="#" className="hover:text-green-400 transition-colors">Bounty Board</a></li>
+            <h4 className="font-bold text-white mb-4 uppercase tracking-wider">Protocols</h4>
+            <ul className="space-y-2 text-gray-500">
+              <li><Link to="/login/alien" className="hover:text-red-500 transition-colors">Alien Network</Link></li>
+              <li><Link to="/login/boardroom" className="hover:text-red-500 transition-colors">Boardroom Access</Link></li>
+              <li><a href="#how-it-works" className="hover:text-red-500 transition-colors">Logic Flow</a></li>
             </ul>
           </div>
 
+          {/* Legal / Social */}
           <div>
-            <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-white/40 mb-8">Boardroom</h4>
-            <ul className="space-y-4 text-sm font-light text-gray-400">
-              <li><Link to="/login/boardroom" className="hover:text-sky-400 transition-colors">Access Boardroom</Link></li>
-              <li><a href="#" className="hover:text-sky-400 transition-colors">Intelligence Feed</a></li>
-              <li><a href="#" className="hover:text-sky-400 transition-colors">Feel the heat</a></li>
+            <h4 className="font-bold text-white mb-4 uppercase tracking-wider">Legal</h4>
+            <ul className="space-y-2 text-gray-500">
+              <li><a href="#" className="hover:text-red-500 transition-colors">Privacy Policy</a></li>
+              <li><a href="#" className="hover:text-red-500 transition-colors">Terms of Service</a></li>
+              <li><a href="#" className="hover:text-red-500 transition-colors">Disclosures</a></li>
             </ul>
           </div>
         </div>
 
-        <div className="max-w-7xl mx-auto mt-20 pt-8 border-t border-white/5 flex flex-col md:flex-row items-center justify-between text-[10px] uppercase tracking-widest text-gray-600">
-          <div>© 2026 Volcano Network</div>
-          <div className="flex gap-8 mt-4 md:mt-0">
-            <a href="#" className="hover:text-white transition-colors">Privacy</a>
-            <a href="#" className="hover:text-white transition-colors">Terms</a>
-            <a href="#" className="hover:text-white transition-colors">Protocol</a>
+        <div className="border-t border-white/10 pt-8 flex flex-col md:flex-row items-center justify-between px-6 max-w-7xl mx-auto text-gray-600">
+          <p>&copy; 2026 VOLCANO PROTOCOL. ALL RIGHTS RESERVED.</p>
+          <div className="flex items-center gap-2 mt-4 md:mt-0">
+            <Code size={12} className="text-red-500" />
+            <span className="text-red-500/50">SYSTEM_STATUS: OPTIMAL</span>
           </div>
         </div>
       </footer>
 
-      {/* Global Status Bar */}
-      <div className="fixed bottom-0 left-0 w-full glass border-t border-white/10 py-3 px-6 md:px-12 flex items-center justify-between z-[100] backdrop-blur-2xl">
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></div>
-            <span className="text-[8px] font-black uppercase tracking-[0.3em] text-gray-600 hidden sm:inline">System Log:</span>
-          </div>
-          <span className="text-[9px] font-bold text-white/30 font-mono truncate max-w-[200px] md:max-w-none">
-            {SYSTEM_LOGS[tickerIndex]}
-          </span>
-        </div>
-        <div className="hidden lg:flex items-center gap-10 text-[8px] font-black uppercase tracking-[0.5em] text-white/5 font-mono">
-          <span>NODES: 1,429</span>
-          <span>LATENCY: 0.12MS</span>
-          <span>UPTIME: 100%</span>
-        </div>
-      </div>
-
-      <style>{`
-        @keyframes fadeInUp {
-          from { opacity: 0; transform: translateY(30px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        .animate-fadeInUp {
-          animation: fadeInUp 1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-          opacity: 0;
-        }
-        @keyframes scanline {
-          0% { transform: translateY(-100%); opacity: 0; }
-          50% { opacity: 1; }
-          100% { transform: translateY(400%); opacity: 0; }
-        }
-        .animate-scanline {
-          animation: scanline 6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
-        }
-      `}</style>
     </div>
   );
 };

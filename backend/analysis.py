@@ -1,3 +1,4 @@
+# Legacy AI analysis logic (partially superseded by worker.py/agents.py but still referenced).
 import os
 import google.generativeai as genai
 from dotenv import load_dotenv

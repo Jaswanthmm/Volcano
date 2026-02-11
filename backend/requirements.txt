@@ -4,3 +4,5 @@ flask-sqlalchemy
 google-genai
 python-dotenv
 waitress
+psycopg2-binary
+

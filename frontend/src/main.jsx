@@ -1,3 +1,4 @@
+// Entry point for the React application, mounting the App component to the DOM.
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'

@@ -1,3 +1,4 @@
+# AI Agent Swarm definition: Core logic for Gatekeeper, Detective, Historian, Visionary.
 import os
 import json
 import time

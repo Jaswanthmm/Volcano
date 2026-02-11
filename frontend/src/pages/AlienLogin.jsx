@@ -1,3 +1,4 @@
+// Authentication page for Aliens (Register/Login).
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { User, Lock, ArrowRight, Shield, AlertCircle, Eye, EyeOff } from 'lucide-react';
@@ -141,7 +142,7 @@ const AlienLogin = () => {
                             </div>
 
                             <div className="space-y-2">
-                                <label className="text-[10px] uppercase tracking-widest text-green-500/50 font-bold block">Entity Name</label>
+                                <label className="text-[10px] uppercase tracking-widest text-green-500/50 font-bold block">Alien Name</label>
                                 <div className="relative group">
                                     <input
                                         type="text"

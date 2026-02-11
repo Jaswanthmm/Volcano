@@ -1,4 +1,5 @@
-from flask import Blueprint, jsonify
+# API routes for Company profile management and data retrieval.
+from flask import Blueprint, jsonify, request
 from models import db, Company, Idea, User
 
 companies_bp = Blueprint('companies', __name__, url_prefix='/api/companies')
