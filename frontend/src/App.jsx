@@ -12,6 +12,7 @@ import ThinkingEngine from './pages/ThinkingEngine';
 import ThinkingEngineLogin from './pages/ThinkingEngineLogin';
 import AlienProfile from './pages/AlienProfile';
 import BoardroomProfile from './pages/BoardroomProfile';
+import Terms from './pages/Terms';
 import ErrorBoundary from './components/ErrorBoundary';
 import SessionManager from './components/SessionManager';
 
@@ -37,6 +38,7 @@ function App() {
           <Route path="/thinking-engine/login" element={<ThinkingEngineLogin />} />
           <Route path="/thinking-engine" element={<ThinkingEngine />} />
           <Route path="/volcano" element={<ThinkingEngine />} /> {/* Alias for backward compatibility */}
+          <Route path="/terms" element={<Terms />} />
         </Routes>
       </ErrorBoundary>
     </Router>

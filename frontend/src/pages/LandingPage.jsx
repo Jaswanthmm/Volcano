@@ -336,7 +336,7 @@ const LandingPage = () => {
             <h4 className="font-bold text-white mb-4 uppercase tracking-wider">Legal</h4>
             <ul className="space-y-2 text-gray-500">
               <li><a href="#" className="hover:text-red-500 transition-colors">Privacy Policy</a></li>
-              <li><a href="#" className="hover:text-red-500 transition-colors">Terms of Service</a></li>
+              <li><Link to="/terms" className="hover:text-red-500 transition-colors">Terms of Service</Link></li>
               <li><a href="#" className="hover:text-red-500 transition-colors">Disclosures</a></li>
             </ul>
           </div>
