@@ -40,7 +40,13 @@ app.register_blueprint(volcano_bp)
 app.register_blueprint(companies_bp)
 
 with app.app_context():
-    db.create_all()
+    try:
+        db.create_all()
+        print("Database tables verified.")
+    except Exception as e:
+        print(f"CRITICAL WARNING: Database initialization failed: {e}")
+        # We generally continue so the health check endpoint still works
+
 
 @app.route('/')
 def home():
