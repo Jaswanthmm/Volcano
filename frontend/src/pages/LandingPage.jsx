@@ -154,10 +154,7 @@ const LandingPage = () => {
             </div>
             <span className="text-xl font-bold tracking-tighter">VOLCANO</span>
           </div>
-          <div className="hidden md:flex gap-8 text-xs font-bold uppercase tracking-widest text-white/60">
-            <a href="#how-it-works" className="hover:text-red-500 transition-colors">How It Works</a>
-            <a href="#protocols" className="hover:text-red-500 transition-colors">Protocols</a>
-          </div>
+
           <div className="flex gap-4">
             <Link to="/login/alien" className="px-5 py-2 bg-white/5 hover:bg-white/10 border border-white/10 text-white text-xs font-bold uppercase tracking-wider rounded transition-colors">
               Login as Alien
