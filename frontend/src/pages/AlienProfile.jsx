@@ -78,8 +78,8 @@ const AlienProfile = () => {
                     </div>
 
                     <div className="flex items-start gap-8 relative z-10">
-                        {/* Avatar */}
-                        <div className="w-24 h-24 rounded-xl bg-black border border-green-500/30 flex items-center justify-center text-4xl font-bold text-green-400 shadow-[0_0_20px_rgba(34,197,94,0.2)]">
+                        {/* Avatar - No Box */}
+                        <div className="w-24 h-24 flex items-center justify-center text-6xl font-black text-green-500 shadow-green-500/20 drop-shadow-[0_0_15px_rgba(34,197,94,0.4)]">
                             {profile.username[0].toUpperCase()}
                         </div>
 
@@ -87,7 +87,7 @@ const AlienProfile = () => {
                             <div className="flex items-center gap-3 mb-2">
                                 <h1 className="text-4xl font-black text-white tracking-wider uppercase">{profile.username}</h1>
                                 {profile.stats.reputation > 80 && (
-                                    <span className="px-3 py-1 bg-yellow-500/10 border border-yellow-500/30 text-yellow-500 text-[10px] font-bold tracking-widest rounded uppercase flex items-center gap-1">
+                                    <span className="text-yellow-500 text-[10px] font-bold tracking-widest uppercase flex items-center gap-1">
                                         <Star size={10} fill="currentColor" /> Elite
                                     </span>
                                 )}
@@ -97,7 +97,7 @@ const AlienProfile = () => {
                                 <span className="flex items-center gap-1"><Calendar size={10} /> Joined {profile.joined_at}</span>
                             </p>
 
-                            {/* Stats Grid */}
+                            {/* Stats Grid - No Boxes */}
                             <div className="grid grid-cols-4 gap-4">
                                 <StatBox label="Reputation" value={`${profile.stats.reputation}% `} icon={<Star size={14} />} />
                                 <StatBox label="Signals Sent" value={profile.stats.total_signals} icon={<Activity size={14} />} />
@@ -170,22 +170,22 @@ const AlienProfile = () => {
 
                             {profile.recent_activity.map((activity, i) => (
                                 <div key={i} className="relative pl-8">
-                                    <div className={`absolute left - 0 top - 1.5 w - 5 h - 5 rounded - full border - 2 flex items - center justify - center bg - black z - 10
+                                    <div className={`absolute left-0 top-1.5 w-5 h-5 rounded-full border-2 flex items-center justify-center bg-black z-10 
                                         ${activity.status === 'accepted' ? 'border-green-500 text-green-500' :
                                             activity.status === 'rejected' ? 'border-red-500/50 text-red-500/50' :
                                                 activity.status === 'volcano_rejected' ? 'border-orange-500/50 text-orange-500/50' :
                                                     'border-blue-500/50 text-blue-500/50'
-                                        } `}>
+                                        }`}>
                                         <div className="w-1.5 h-1.5 rounded-full bg-current"></div>
                                     </div>
 
-                                    <div className="bg-green-900/5 border border-green-500/10 rounded-lg p-3">
+                                    <div className="bg-transparent p-0"> {/* Removed Box from Timeline */}
                                         <div className="flex justify-between items-start mb-1">
-                                            <span className={`text - [9px] font - bold uppercase tracking - wider px - 1.5 py - 0.5 rounded
-                                                ${activity.status === 'accepted' ? 'bg-green-500/10 text-green-400' :
-                                                    activity.status === 'processing' ? 'bg-blue-500/10 text-blue-400' :
-                                                        'bg-white/5 text-white/40'
-                                                } `}>
+                                            <span className={`text-[9px] font-bold uppercase tracking-wider px-0 py-0 rounded
+                                                ${activity.status === 'accepted' ? 'text-green-400' :
+                                                    activity.status === 'processing' ? 'text-blue-400' :
+                                                        'text-white/40'
+                                                }`}>
                                                 {activity.status.replace(/_/g, ' ')}
                                             </span>
                                             <span className="text-[9px] text-green-500/30">{new Date(activity.created_at).toLocaleDateString()}</span>
@@ -204,12 +204,15 @@ const AlienProfile = () => {
     );
 };
 
+// Simplified StatBox - No Borders/Backgrounds
 const StatBox = ({ label, value, icon, highlight }) => (
-    <div className={`p - 4 rounded - xl border flex flex - col items - center justify - center text - center gap - 2 transition - all
-        ${highlight ? 'bg-green-500/10 border-green-500 text-green-400 shadow-[0_0_15px_rgba(34,197,94,0.1)]' : 'bg-black border-green-500/20 text-green-600'} `}>
-        <div className="opacity-50">{icon}</div>
-        <div className="text-2xl font-black text-white">{value}</div>
-        <div className="text-[9px] uppercase tracking-widest opacity-60">{label}</div>
+    <div className={`flex flex-col items-start justify-center gap-1 transition-all pl-4 border-l-2
+        ${highlight ? 'border-l-green-400 text-green-400' : 'border-l-green-500/20 text-green-600'}`}>
+        <div className="flex items-center gap-2">
+            <span className="opacity-50">{icon}</span>
+            <span className="text-[10px] uppercase tracking-widest opacity-60 leading-none mt-0.5">{label}</span>
+        </div>
+        <div className="text-3xl font-black text-white leading-none">{value}</div>
     </div>
 );
 

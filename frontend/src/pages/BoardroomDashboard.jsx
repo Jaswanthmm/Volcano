@@ -1,7 +1,7 @@
 // Admin interface for Companies (Titans) to review and manage signals.
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Radio, Send, Database, Shield, LogOut, Loader2, AlertTriangle, CheckCircle2, Building, MessageSquare, XCircle, HelpCircle, Activity, Lock, Users, Briefcase, Search, Clock } from 'lucide-react';
+import { Radio, Send, Database, Shield, LogOut, Loader2, AlertTriangle, CheckCircle2, Building, MessageSquare, XCircle, HelpCircle, Activity, Lock, Users, Briefcase, Search, Clock, Box, User, Zap, Star } from 'lucide-react';
 import { API_URL } from '../config';
 
 const BoardroomDashboard = () => {
