@@ -201,18 +201,20 @@ const BoardroomLogin = () => {
                             </div>
                         </div>
 
-                        {/* Terms & Conditions */}
-                        <div className="flex items-center gap-3 bg-blue-900/20 p-4 rounded-xl border border-blue-500/30 shadow-lg mb-6">
-                            <input
-                                type="checkbox"
-                                id="terms"
-                                required
-                                className="w-5 h-5 bg-black border border-blue-400 rounded focus:ring-2 focus:ring-blue-500 text-blue-500 cursor-pointer accent-blue-500"
-                            />
-                            <label htmlFor="terms" className="text-[11px] text-blue-200 uppercase tracking-wide cursor-pointer select-none font-bold">
-                                I accept the <Link to="/terms" target="_blank" className="text-white underline decoration-blue-500 hover:text-blue-400">Protocol Terms & Conditions</Link>
-                            </label>
-                        </div>
+                        {/* Terms & Conditions (Registration Only) */}
+                        {!isLogin && (
+                            <div className="flex items-center gap-2 mt-4 ml-1">
+                                <input
+                                    type="checkbox"
+                                    id="terms"
+                                    required
+                                    className="w-3 h-3 bg-black/20 border border-blue-200/30 rounded focus:ring-1 focus:ring-blue-500 text-blue-500 cursor-pointer"
+                                />
+                                <label htmlFor="terms" className="text-[9px] text-blue-200/60 uppercase tracking-wide cursor-pointer select-none">
+                                    I accept the <Link to="/terms" target="_blank" className="text-blue-400 hover:text-white transition-colors">Protocol Terms & Conditions</Link>
+                                </label>
+                            </div>
+                        )}
 
                         <button type="submit" disabled={loading} className="w-full group bg-white text-black hover:bg-blue-50 border border-transparent rounded-xl px-4 py-4 mt-8 transition-all duration-300 flex items-center justify-center gap-3 font-bold text-xs uppercase tracking-widest shadow-lg hover:shadow-blue-900/20 hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed">
                             {loading ? 'Processing...' : (isLogin ? 'Enter Boardroom' : 'Request Access')}

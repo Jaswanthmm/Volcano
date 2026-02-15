@@ -199,18 +199,20 @@ const AlienLogin = () => {
                             </div>
                         </div>
 
-                        {/* Terms & Conditions */}
-                        <div className="flex items-center gap-3 bg-green-900/10 p-3 rounded border border-green-500/20 shadow-inner">
-                            <input
-                                type="checkbox"
-                                id="terms"
-                                required
-                                className="w-4 h-4 bg-black border border-green-500/50 rounded focus:ring-1 focus:ring-green-500 text-green-500 cursor-pointer accent-green-500"
-                            />
-                            <label htmlFor="terms" className="text-[10px] text-green-500 uppercase tracking-wide cursor-pointer select-none font-bold">
-                                I agree to the <Link to="/terms" target="_blank" className="underline hover:text-white decoration-green-500/50">Terms & Conditions</Link>
-                            </label>
-                        </div>
+                        {/* Terms & Conditions (Registration Only) */}
+                        {!isLogin && (
+                            <div className="flex items-center gap-2 mt-4 ml-1">
+                                <input
+                                    type="checkbox"
+                                    id="terms"
+                                    required
+                                    className="w-3 h-3 bg-black/50 border border-green-500/30 rounded focus:ring-1 focus:ring-green-500 text-green-500 cursor-pointer"
+                                />
+                                <label htmlFor="terms" className="text-[9px] text-green-500/60 uppercase tracking-wide cursor-pointer select-none">
+                                    I agree to the <Link to="/terms" target="_blank" className="text-green-400 hover:text-green-300 transition-colors">Terms & Conditions</Link>
+                                </label>
+                            </div>
+                        )}
 
                         <button type="submit" disabled={loading} className="w-full group bg-green-900/20 hover:bg-green-500 text-green-400 hover:text-black border border-green-500/30 rounded-lg px-4 py-4 mt-8 transition-all duration-300 flex items-center justify-center gap-3 font-bold text-xs uppercase tracking-widest disabled:opacity-50 disabled:cursor-not-allowed">
                             {loading ? 'Processing...' : (isLogin ? 'Establish Link' : 'Register Node')}
