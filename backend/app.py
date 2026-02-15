@@ -21,7 +21,26 @@ def internal_error(e):
 
 basedir = os.path.abspath(os.path.dirname(__file__))
 
-# ... database config ...
+# Database Config
+# Check for DATABASE_URL in env (e.g. Postgres), otherwise default to SQLite
+database_url = os.getenv('DATABASE_URL')
+if database_url and database_url.startswith("postgres"):
+    app.config['SQLALCHEMY_DATABASE_URI'] = database_url
+else:
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'ideas.db')
+
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+db.init_app(app)
+app.register_blueprint(ideas_bp)
+app.register_blueprint(auth_bp)
+app.register_blueprint(users_bp)
+app.register_blueprint(messages_bp)
+app.register_blueprint(volcano_bp)
+app.register_blueprint(companies_bp)
+
+with app.app_context():
+    db.create_all()
 
 @app.route('/')
 def home():
