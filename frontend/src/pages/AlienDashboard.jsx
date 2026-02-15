@@ -272,9 +272,7 @@ const AlienDashboard = () => {
                     >
                         <Database size={16} /> ARCHIVE LOGS
                     </div>
-                    <div className="px-4 py-3 rounded-lg hover:bg-white/5 text-green-600 hover:text-green-400 transition-colors text-xs tracking-widest flex items-center gap-3 cursor-not-allowed opacity-50">
-                        <Shield size={16} /> PROTOCOLS
-                    </div>
+
                 </div>
 
                 <div className="mt-auto pt-6 border-t border-green-500/20">
