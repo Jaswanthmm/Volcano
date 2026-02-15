@@ -64,10 +64,7 @@ const BoardroomLogin = () => {
                 localStorage.setItem('titan_token', 'mock_token');
                 localStorage.setItem('titan_user', JSON.stringify(data));
                 navigate('/boardroom/dashboard');
-                alert(`Welcome Boardroom Member: ${data.company_name}`);
             } else {
-                alert('Organization Registered. Please confirm credentials to access Boardroom.');
-                setIsLogin(true);
                 setIsLogin(true);
                 setFormData({ company_name: '', email: '', password: '', website_url: '' });
             }

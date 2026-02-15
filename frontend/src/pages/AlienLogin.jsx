@@ -56,7 +56,6 @@ const AlienLogin = () => {
                 localStorage.setItem('alien_token', 'mock_token');
                 localStorage.setItem('alien_user', JSON.stringify(data));
                 navigate('/alien/dashboard');
-                alert(`Welcome back, Node ${data.alien_id}`);
             } else {
                 setSuccessMsg(`Uplink Established! Your Node Identifier is: ${data.alien_id}`);
                 setIsLogin(true);
