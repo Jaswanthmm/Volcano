@@ -1,6 +1,6 @@
 // Public profile page for Aliens (displaying stats and signals).
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { User, Shield, Star, Activity, ArrowLeft, Briefcase, Zap, Calendar, Database, Clock } from 'lucide-react';
 import { API_URL } from '../config';
 
