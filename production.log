@@ -1,4 +1,1 @@
-[INFO] Starting Production Server at http://0.0.0.0:8080
-[INFO] Serving Frontend from: D:\Valcano\frontend\dist
-[INFO] API ready at /api/...
-DEBUG: Hit register_alien with data: {'email': 'ven@gmail.com', 'password': '123', 'name': 'Ven'}
+
