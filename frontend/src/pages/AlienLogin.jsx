@@ -199,6 +199,19 @@ const AlienLogin = () => {
                             </div>
                         </div>
 
+                        {/* Terms & Conditions */}
+                        <div className="flex items-center gap-3">
+                            <input
+                                type="checkbox"
+                                id="terms"
+                                required
+                                className="w-4 h-4 bg-black/50 border border-green-500/30 rounded focus:ring-1 focus:ring-green-500 text-green-500 cursor-pointer"
+                            />
+                            <label htmlFor="terms" className="text-[10px] text-green-500/60 uppercase tracking-wide cursor-pointer select-none">
+                                I agree to the <Link to="/terms" target="_blank" className="text-green-400 hover:text-green-300 border-b border-green-500/30">Terms & Conditions</Link>
+                            </label>
+                        </div>
+
                         <button type="submit" disabled={loading} className="w-full group bg-green-900/20 hover:bg-green-500 text-green-400 hover:text-black border border-green-500/30 rounded-lg px-4 py-4 mt-8 transition-all duration-300 flex items-center justify-center gap-3 font-bold text-xs uppercase tracking-widest disabled:opacity-50 disabled:cursor-not-allowed">
                             {loading ? 'Processing...' : (isLogin ? 'Establish Link' : 'Register Node')}
                             <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />

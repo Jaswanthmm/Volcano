@@ -201,6 +201,19 @@ const BoardroomLogin = () => {
                             </div>
                         </div>
 
+                        {/* Terms & Conditions */}
+                        <div className="flex items-center gap-3 bg-blue-900/5 p-3 rounded-lg border border-blue-500/10">
+                            <input
+                                type="checkbox"
+                                id="terms"
+                                required
+                                className="w-4 h-4 bg-black/20 border border-blue-200/30 rounded focus:ring-1 focus:ring-blue-500 text-blue-500 cursor-pointer"
+                            />
+                            <label htmlFor="terms" className="text-[10px] text-blue-200/60 uppercase tracking-wide cursor-pointer select-none">
+                                I accept the <Link to="/terms" target="_blank" className="text-blue-400 hover:text-white border-b border-blue-400/30">Protocol Terms & Conditions</Link>
+                            </label>
+                        </div>
+
                         <button type="submit" disabled={loading} className="w-full group bg-white text-black hover:bg-blue-50 border border-transparent rounded-xl px-4 py-4 mt-8 transition-all duration-300 flex items-center justify-center gap-3 font-bold text-xs uppercase tracking-widest shadow-lg hover:shadow-blue-900/20 hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed">
                             {loading ? 'Processing...' : (isLogin ? 'Enter Boardroom' : 'Request Access')}
                             <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />

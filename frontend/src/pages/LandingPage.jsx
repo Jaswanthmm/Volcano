@@ -304,7 +304,7 @@ const LandingPage = () => {
       </section>
 
       {/* --- FOOTER --- */}
-      <footer className="border-t border-white/10 bg-black pt-16 pb-8 text-xs font-mono">
+      <footer className="relative z-10 border-t border-white/10 bg-black pt-16 pb-8 text-xs font-mono">
         <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
           {/* Brand */}
           <div className="col-span-1 md:col-span-2">
