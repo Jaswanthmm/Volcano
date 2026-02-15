@@ -133,17 +133,20 @@ const LandingPage = () => {
   const fullText = "YOUR MIND.";
 
   useEffect(() => {
-    let i = 0;
-    const typingInterval = setInterval(() => {
-      if (i <= fullText.length) {
-        setHeroText(fullText.substring(0, i));
-        i++;
-      } else {
-        clearInterval(typingInterval);
-      }
-    }, 150); // Speed of typing
+    let index = 0;
+    const intervalId = setInterval(() => {
+      setHeroText((prev) => {
+        if (index < fullText.length) {
+          const nextChar = fullText.charAt(index);
+          index++;
+          return prev + nextChar;
+        }
+        clearInterval(intervalId);
+        return prev;
+      });
+    }, 150);
 
-    return () => clearInterval(typingInterval);
+    return () => clearInterval(intervalId);
   }, []);
 
   return (
@@ -193,7 +196,7 @@ const LandingPage = () => {
 
         <h1 className="text-5xl md:text-7xl lg:text-8xl font-black tracking-tight leading-none mb-8">
           MONETIZE<br />
-          <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-500 via-orange-500 to-red-600">
+          <span className="text-red-600 inline-block min-w-[20px]">
             {heroText}
           </span>
           <span className="inline-block w-3 h-3 md:w-5 md:h-5 bg-red-600 rounded-full ml-1 animate-pulse"></span>
