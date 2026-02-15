@@ -202,15 +202,15 @@ const BoardroomLogin = () => {
                         </div>
 
                         {/* Terms & Conditions */}
-                        <div className="flex items-center gap-3 bg-blue-900/5 p-3 rounded-lg border border-blue-500/10">
+                        <div className="flex items-center gap-3 bg-blue-900/20 p-4 rounded-xl border border-blue-500/30 shadow-lg mb-6">
                             <input
                                 type="checkbox"
                                 id="terms"
                                 required
-                                className="w-4 h-4 bg-black/20 border border-blue-200/30 rounded focus:ring-1 focus:ring-blue-500 text-blue-500 cursor-pointer"
+                                className="w-5 h-5 bg-black border border-blue-400 rounded focus:ring-2 focus:ring-blue-500 text-blue-500 cursor-pointer accent-blue-500"
                             />
-                            <label htmlFor="terms" className="text-[10px] text-blue-200/60 uppercase tracking-wide cursor-pointer select-none">
-                                I accept the <Link to="/terms" target="_blank" className="text-blue-400 hover:text-white border-b border-blue-400/30">Protocol Terms & Conditions</Link>
+                            <label htmlFor="terms" className="text-[11px] text-blue-200 uppercase tracking-wide cursor-pointer select-none font-bold">
+                                I accept the <Link to="/terms" target="_blank" className="text-white underline decoration-blue-500 hover:text-blue-400">Protocol Terms & Conditions</Link>
                             </label>
                         </div>
 

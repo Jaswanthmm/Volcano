@@ -200,15 +200,15 @@ const AlienLogin = () => {
                         </div>
 
                         {/* Terms & Conditions */}
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-3 bg-green-900/10 p-3 rounded border border-green-500/20 shadow-inner">
                             <input
                                 type="checkbox"
                                 id="terms"
                                 required
-                                className="w-4 h-4 bg-black/50 border border-green-500/30 rounded focus:ring-1 focus:ring-green-500 text-green-500 cursor-pointer"
+                                className="w-4 h-4 bg-black border border-green-500/50 rounded focus:ring-1 focus:ring-green-500 text-green-500 cursor-pointer accent-green-500"
                             />
-                            <label htmlFor="terms" className="text-[10px] text-green-500/60 uppercase tracking-wide cursor-pointer select-none">
-                                I agree to the <Link to="/terms" target="_blank" className="text-green-400 hover:text-green-300 border-b border-green-500/30">Terms & Conditions</Link>
+                            <label htmlFor="terms" className="text-[10px] text-green-500 uppercase tracking-wide cursor-pointer select-none font-bold">
+                                I agree to the <Link to="/terms" target="_blank" className="underline hover:text-white decoration-green-500/50">Terms & Conditions</Link>
                             </label>
                         </div>
 

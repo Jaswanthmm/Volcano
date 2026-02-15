@@ -129,7 +129,7 @@ const LandingPage = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-black text-white font-sans selection:bg-red-500 selection:text-white overflow-x-hidden">
+    <div className="min-h-screen flex flex-col bg-black text-white font-sans selection:bg-red-500 selection:text-white overflow-x-hidden">
 
       {/* --- BACKGROUND --- */}
       <div className="fixed inset-0 pointer-events-none z-0">
@@ -304,7 +304,8 @@ const LandingPage = () => {
       </section>
 
       {/* --- FOOTER --- */}
-      <footer className="relative z-10 border-t border-white/10 bg-black pt-16 pb-8 text-xs font-mono">
+      {/* --- FOOTER --- */}
+      <footer className="relative z-10 mt-auto border-t border-white/10 bg-neutral-900/80 backdrop-blur pt-16 pb-8 text-xs font-mono">
         <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
           {/* Brand */}
           <div className="col-span-1 md:col-span-2">
