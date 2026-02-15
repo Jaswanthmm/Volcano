@@ -1,8 +1,6 @@
 # API routes for submitting, retrieving, and managing ideas (signals).
 from flask import Blueprint, request, jsonify, current_app
 from models import db, Idea, User, Company, Message
-from agents import run_pipeline # This line is kept as per the provided example, though the comment suggests it might move.
-# Threading removed in favor of worker process
 # from agents import run_pipeline (Moved to worker.py)
 
 ideas_bp = Blueprint('ideas', __name__, url_prefix='/api/ideas')
