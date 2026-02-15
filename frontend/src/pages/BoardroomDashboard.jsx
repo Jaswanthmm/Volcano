@@ -1,7 +1,7 @@
 // Admin interface for Companies (Titans) to review and manage signals.
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Radio, Send, Database, Shield, LogOut, Loader2, AlertTriangle, CheckCircle2, Building, MessageSquare, XCircle, HelpCircle, Activity, Lock, Users, Briefcase, Search, Clock, Box, User, Zap, Star } from 'lucide-react';
+import { Radio, Send, Database, Shield, LogOut, Loader2, AlertTriangle, CheckCircle2, Building, MessageSquare, XCircle, HelpCircle, Activity, Lock, Users, Briefcase, Search, Clock, Building2, User, Zap, Star } from 'lucide-react';
 import { API_URL } from '../config';
 
 const BoardroomDashboard = () => {
@@ -172,7 +172,7 @@ const BoardroomDashboard = () => {
                         <img src={company.logo_url} alt="Logo" className="w-8 h-8 rounded-lg shadow-lg shadow-blue-900/50 object-contain bg-white/5" />
                     ) : (
                         <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shadow-lg shadow-blue-900/50">
-                            <Box size={18} />
+                            <Building2 size={18} />
                         </div>
                     )}
                     <div>

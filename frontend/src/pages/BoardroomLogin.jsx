@@ -100,7 +100,7 @@ const BoardroomLogin = () => {
                 {/* Header content */}
                 <div className="mb-12 text-center">
                     <Link to="/" className="inline-flex items-center justify-center w-16 h-16 mx-auto mb-6 bg-white/5 border border-white/10 rounded-2xl text-blue-400 shadow-2xl backdrop-blur-xl hover:scale-105 transition-transform duration-300">
-                        <Box size={32} />
+                        <Building2 size={32} />
                     </Link>
                     <h1 className="text-3xl md:text-4xl font-bold tracking-tight mb-2 text-white">Boardroom Access</h1>
                     <p className="text-blue-200/50 text-xs uppercase tracking-[0.3em] font-bold">Industrial Intelligence Portal</p>

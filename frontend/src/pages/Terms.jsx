@@ -82,11 +82,11 @@ const Terms = () => {
                         </h2>
                         <p className="mb-4">
                             **For Aliens**: You warrant that all submissions are your original work and do not infringe on existing patents or NDAs.
-                            Spamming the network with high-frequency, low-quality noise will result in permanent Neural Link severance (Ban).
+                            Spamming the network with high-frequency, low-quality noise will result in permanent Neural Link severance (Ban) and need to face the legal consequences for any unauthorized use of the platform.
                         </p>
                         <p>
                             **For Boardrooms**: You agree to treat all incoming signals as confidential. You may not implement a submitted idea without "Acquiring" it through the platform.
-                            Violating this trust will result in immediate expulsion from the Boardroom network.
+                            Violating this trust will result in immediate expulsion from the Boardroom network and need to face the legal consequences.
                         </p>
                     </section>
 
