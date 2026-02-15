@@ -14,7 +14,7 @@ const AlienProfile = () => {
     useEffect(() => {
         const fetchProfile = async () => {
             try {
-                const res = await fetch(`${API_URL} /api/users / alien / ${id} `);
+                const res = await fetch(`${API_URL}/api/users/alien/${id}`);
                 if (!res.ok) throw new Error("Alien identity not found in database.");
                 const data = await res.json();
                 setProfile(data);

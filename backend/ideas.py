@@ -105,8 +105,27 @@ def submit_idea():
                 db.session.commit()
             except Exception as e:
                 print(f"Background AI Worker Failed: {e}")
+                
+                # Check for Resource Exhausted (429)
+                error_str = str(e)
+                if "429" in error_str or "Resource exhausted" in error_str:
+                    friendly_error = "The Cognitive Core is currently overloaded with signals. Please try again in a few moments."
+                    status_log = "Error: System Capacity Reached (429). Retrying advised."
+                else:
+                    friendly_error = f"System Error: {error_str}"
+                    status_log = f"System Error: {error_str}"
+
                 idea.status = 'volcano_rejected'
-                idea.ai_analysis_log = f"SYSTEM ERROR: {e}"
+                idea.ai_analysis_log = status_log
+                
+                # Feedback Message
+                msg = Message(
+                    idea_id=idea.id,
+                    sender_type='volcano', 
+                    content=f"COGNITIVE CORE ALERT: {friendly_error}"
+                )
+                db.session.add(msg)
+                
                 db.session.commit()
 
     # Pass app object, not context
