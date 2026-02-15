@@ -8,8 +8,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Initialize Gemini Client
-client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+# Initialize Gemini Client Lazy Loaded
+# client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
 # --- SHARED STATE FOR UI VISUALIZATION ---
 # Even though we have 1 agent, we will map its steps to the UI for visualization.
@@ -53,6 +53,18 @@ class AgentLog:
 def run_super_agent(title, content, log):
     log.add("Thinking Engine", "Initializing Single Super-Agent...")
     
+    try:
+        # LAZY LOAD CLIENT
+        api_key = os.getenv("GEMINI_API_KEY")
+        if not api_key:
+             log.add("ERROR", "Gemini API Key missing")
+             return False, "Configuration Error", None
+             
+        client = genai.Client(api_key=api_key)
+    except Exception as e:
+        log.add("ERROR", f"Failed to initialize AI Client: {e}")
+        return False, "AI System Offline", None
+
     # User's EXACT Instruction Set from GCP Agent Builder
     system_instruction = """
     You are the Thinking Engine Agent.

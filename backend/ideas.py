@@ -43,6 +43,70 @@ def submit_idea():
     db.session.add(new_idea)
     db.session.commit()
 
+    # 4. Trigger AI Processing in Background Thread
+    # We use a thread so the user gets an immediate response
+    from threading import Thread
+    
+    def background_worker(app_context, idea_id):
+        with app_context:
+            from agents import run_pipeline
+             # Re-fetch idea and company inside thread
+            idea = Idea.query.get(idea_id)
+            if not idea: return
+            
+            company = Company.query.get(idea.recipient_company_id)
+            if not company: return
+
+            # Fetch Context
+            recent_ideas = Idea.query.filter_by(recipient_company_id=company.id)\
+                .filter(Idea.id != idea.id)\
+                .order_by(Idea.created_at.desc()).limit(20).all()
+            
+            recent_context = [f"Title: {i.title}, Content: {i.content}, Status: {i.status}" for i in recent_ideas]
+
+            # Run Pipeline
+            idea.status = 'processing'
+            db.session.commit()
+            
+            try:
+                analysis = run_pipeline(
+                    idea.title, 
+                    idea.content, 
+                    company.company_name, 
+                    recent_context, 
+                    idea.signal_type, 
+                    idea_id=idea.id
+                )
+                
+                 # Save Results
+                if analysis['valid']:
+                    idea.status = 'sent_to_boardroom'
+                    idea.tags = analysis.get('tags', '')
+                    idea.ai_analysis_log = analysis['log']
+                else:
+                    idea.status = 'volcano_rejected'
+                    idea.ai_analysis_log = analysis['log'] + f"\n\n[FINAL REJECTION REASON]: {analysis['reason']}"
+                    
+                    # Feedback Message
+                    msg = Message(
+                        idea_id=idea.id,
+                        sender_type='volcano', 
+                        content=f"COGNITIVE CORE ALERT: {analysis['reason']}"
+                    )
+                    db.session.add(msg)
+                
+                db.session.commit()
+            except Exception as e:
+                print(f"Background AI Worker Failed: {e}")
+                idea.status = 'volcano_rejected'
+                idea.ai_analysis_log = f"SYSTEM ERROR: {e}"
+                db.session.commit()
+
+    # Use app_context to ensure thread has access to DB
+    thread = Thread(target=background_worker, args=(current_app.app_context(), new_idea.id))
+    thread.daemon = True # Daemon threads die if main process dies (which is fine here)
+    thread.start()
+
     return jsonify({
         "message": "Signal queued for Volcano analysis.",
         "signal_id": new_idea.id,
