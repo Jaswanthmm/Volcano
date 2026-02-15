@@ -302,7 +302,6 @@ Use **pgAdmin 4** or **DBeaver** with these credentials:
 - Port: `5432`
 - Database: `volcano_db`
 - User: `postgres`
-- Password: `dbpostgres`
 
 ---
 
