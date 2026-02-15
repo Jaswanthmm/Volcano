@@ -130,7 +130,7 @@ const LandingPage = () => {
 
   // --- TYPING ANIMATION ---
   const [heroText, setHeroText] = useState("");
-  const fullText = "YOUR MIND.";
+  const fullText = "YOUR MIND";
 
   useEffect(() => {
     let index = 0;
