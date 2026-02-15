@@ -46,9 +46,16 @@ def submit_idea():
     # 4. Trigger AI Processing in Background Thread
     # We use a thread so the user gets an immediate response
     from threading import Thread
+    import time
     
-    def background_worker(app_context, idea_id):
-        with app_context:
+    # Capture real app object to pass to thread
+    app_obj = current_app._get_current_object()
+
+    def background_worker(app, idea_id):
+        # Small delay to ensure main request returns and DB unlocks
+        time.sleep(2)
+        
+        with app.app_context():
             from agents import run_pipeline
              # Re-fetch idea and company inside thread
             idea = Idea.query.get(idea_id)
@@ -102,9 +109,9 @@ def submit_idea():
                 idea.ai_analysis_log = f"SYSTEM ERROR: {e}"
                 db.session.commit()
 
-    # Use app_context to ensure thread has access to DB
-    thread = Thread(target=background_worker, args=(current_app.app_context(), new_idea.id))
-    thread.daemon = True # Daemon threads die if main process dies (which is fine here)
+    # Pass app object, not context
+    thread = Thread(target=background_worker, args=(app_obj, new_idea.id))
+    thread.daemon = True 
     thread.start()
 
     return jsonify({
