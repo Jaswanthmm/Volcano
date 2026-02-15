@@ -129,25 +129,40 @@ const LandingPage = () => {
   }, []);
 
   // --- TYPING ANIMATION ---
-  const [heroText, setHeroText] = useState("");
-  const fullText = "YOUR MIND";
+  const [heroText, setHeroText] = useState("YOUR ");
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [loopNum, setLoopNum] = useState(0);
 
   useEffect(() => {
-    let index = 0;
-    const intervalId = setInterval(() => {
-      setHeroText((prev) => {
-        if (index < fullText.length) {
-          const nextChar = fullText.charAt(index);
-          index++;
-          return prev + nextChar;
-        }
-        clearInterval(intervalId);
-        return prev;
-      });
-    }, 150);
+    const words = ["MIND", "THOUGHTS"];
+    const i = loopNum % words.length;
+    const fullText = `YOUR ${words[i]}`;
 
-    return () => clearInterval(intervalId);
-  }, []);
+    let speed = 150;
+    if (isDeleting) speed = 75;
+    if (!isDeleting && heroText === fullText) speed = 2000;
+
+    const tick = setTimeout(() => {
+      setHeroText((prev) => {
+        if (isDeleting) {
+          if (prev === "YOUR ") {
+            setIsDeleting(false);
+            setLoopNum((l) => l + 1);
+            return prev;
+          }
+          return prev.slice(0, -1);
+        } else {
+          if (prev === fullText) {
+            setIsDeleting(true);
+            return prev;
+          }
+          return fullText.slice(0, prev.length + 1);
+        }
+      });
+    }, speed);
+
+    return () => clearTimeout(tick);
+  }, [heroText, isDeleting, loopNum]);
 
   return (
     <div className="min-h-screen flex flex-col bg-black text-white font-sans selection:bg-red-500 selection:text-white overflow-x-hidden">
