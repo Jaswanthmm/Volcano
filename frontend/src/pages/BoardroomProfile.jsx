@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Building2, Shield, Globe, ArrowLeft, TrendingUp, CheckCircle2, Clock, DollarSign } from 'lucide-react';
+import { API_URL } from '../config';
 
 const BoardroomProfile = () => {
     const { id } = useParams();
@@ -13,7 +14,7 @@ const BoardroomProfile = () => {
     useEffect(() => {
         const fetchProfile = async () => {
             try {
-                const res = await fetch(`/api/companies/${id}/profile`);
+                const res = await fetch(`${API_URL}/api/companies/${id}/profile`);
                 if (!res.ok) throw new Error("Boardroom dossier not accessible.");
                 const data = await res.json();
                 setCompany(data);

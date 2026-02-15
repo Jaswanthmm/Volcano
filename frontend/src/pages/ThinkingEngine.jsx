@@ -1,7 +1,7 @@
-// Visualization component for the AI "Thinking Engine" processing nodes.
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BrainCircuit, Activity, ShieldAlert, Cpu, CheckCircle2, XCircle, Clock, Server, Eye, Zap } from 'lucide-react';
+import { API_URL } from '../config';
 
 const ThinkingEngine = () => {
     const navigate = useNavigate();
@@ -28,8 +28,8 @@ const ThinkingEngine = () => {
     const fetchData = async () => {
         try {
             const [streamRes, statsRes] = await Promise.all([
-                fetch('/api/volcano/stream'),
-                fetch('/api/volcano/stats')
+                fetch(`${API_URL}/api/volcano/stream`),
+                fetch(`${API_URL}/api/volcano/stats`)
             ]);
 
             if (streamRes.ok) {

@@ -1,7 +1,8 @@
 // Admin interface for Companies (Titans) to review and manage signals.
-import React, { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { Box, Activity, Shield, Users, Loader2, CheckCircle2, XCircle, Search, Clock, ChevronRight, User, Star, Zap, HelpCircle, Send, MessageSquare } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Radio, Send, Database, Shield, LogOut, Loader2, AlertTriangle, CheckCircle2, Building, MessageSquare, XCircle, HelpCircle, Activity, Lock, Users, Briefcase } from 'lucide-react';
+import { API_URL } from '../config';
 
 const BoardroomDashboard = () => {
     const navigate = useNavigate();
@@ -29,7 +30,7 @@ const BoardroomDashboard = () => {
         setShowChatModal(true);
         // Fetch messages
         try {
-            const res = await fetch(`/api/messages/${selectedSignal.id}`);
+            const res = await fetch(`${API_URL}/api/messages/${selectedSignal.id}`);
             if (res.ok) {
                 setChatMessages(await res.json());
             }
@@ -42,7 +43,7 @@ const BoardroomDashboard = () => {
         if (!newMessage.trim() || !selectedSignal) return;
         setSendingMsg(true);
         try {
-            const res = await fetch(`/api/messages/`, {
+            const res = await fetch(`${API_URL}/api/messages/`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -79,8 +80,8 @@ const BoardroomDashboard = () => {
 
         // Fetch Data Parallel
         Promise.all([
-            fetch(`/api/ideas/company/${companyData.id}`),
-            fetch(`/api/users/aliens`)
+            fetch(`${API_URL}/api/ideas/company/${companyData.id}`),
+            fetch(`${API_URL}/api/users/aliens`)
         ])
             .then(async ([signalsRes, aliensRes]) => {
                 if (signalsRes.ok) {
@@ -101,7 +102,7 @@ const BoardroomDashboard = () => {
         if (!selectedSignal) return;
 
         try {
-            const res = await fetch(`/api/ideas/${selectedSignal.id}/status`, {
+            const res = await fetch(`${API_URL}/api/ideas/${selectedSignal.id}/status`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ status })
@@ -135,7 +136,7 @@ const BoardroomDashboard = () => {
             // Check if username is valid, if not (e.g. from Unknown in weird case), return
             if (!username) return;
 
-            const res = await fetch(`/api/users/alien/${username}`);
+            const res = await fetch(`${API_URL}/api/users/alien/${username}`);
             if (res.ok) {
                 const profile = await res.json();
                 setSelectedAlienProfile(profile);

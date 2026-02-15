@@ -1,7 +1,8 @@
 // Public profile page for Aliens (displaying stats and signals).
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { User, Shield, Star, Activity, ArrowLeft, Briefcase, Zap, Calendar } from 'lucide-react';
+import { useParams, Link } from 'react-router-dom';
+import { User, Shield, Star, Activity, ArrowLeft, Briefcase, Zap, Calendar, Database, Clock } from 'lucide-react';
+import { API_URL } from '../config';
 
 const AlienProfile = () => {
     const { id } = useParams(); // Can be ID or Username
@@ -13,7 +14,7 @@ const AlienProfile = () => {
     useEffect(() => {
         const fetchProfile = async () => {
             try {
-                const res = await fetch(`/api/users/alien/${id}`);
+                const res = await fetch(`${API_URL} /api/users / alien / ${id} `);
                 if (!res.ok) throw new Error("Alien identity not found in database.");
                 const data = await res.json();
                 setProfile(data);
@@ -98,7 +99,7 @@ const AlienProfile = () => {
 
                             {/* Stats Grid */}
                             <div className="grid grid-cols-4 gap-4">
-                                <StatBox label="Reputation" value={`${profile.stats.reputation}%`} icon={<Star size={14} />} />
+                                <StatBox label="Reputation" value={`${profile.stats.reputation}% `} icon={<Star size={14} />} />
                                 <StatBox label="Signals Sent" value={profile.stats.total_signals} icon={<Activity size={14} />} />
                                 <StatBox label="Accepted" value={profile.stats.accepted} icon={<Briefcase size={14} />} highlight />
                                 <StatBox label="Filtered" value={profile.stats.filtered} icon={<Shield size={14} />} />
@@ -169,20 +170,22 @@ const AlienProfile = () => {
 
                             {profile.recent_activity.map((activity, i) => (
                                 <div key={i} className="relative pl-8">
-                                    <div className={`absolute left-0 top-1.5 w-5 h-5 rounded-full border-2 flex items-center justify-center bg-black z-10
+                                    <div className={`absolute left - 0 top - 1.5 w - 5 h - 5 rounded - full border - 2 flex items - center justify - center bg - black z - 10
                                         ${activity.status === 'accepted' ? 'border-green-500 text-green-500' :
                                             activity.status === 'rejected' ? 'border-red-500/50 text-red-500/50' :
                                                 activity.status === 'volcano_rejected' ? 'border-orange-500/50 text-orange-500/50' :
-                                                    'border-blue-500/50 text-blue-500/50'}`}>
+                                                    'border-blue-500/50 text-blue-500/50'
+                                        } `}>
                                         <div className="w-1.5 h-1.5 rounded-full bg-current"></div>
                                     </div>
 
                                     <div className="bg-green-900/5 border border-green-500/10 rounded-lg p-3">
                                         <div className="flex justify-between items-start mb-1">
-                                            <span className={`text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded
+                                            <span className={`text - [9px] font - bold uppercase tracking - wider px - 1.5 py - 0.5 rounded
                                                 ${activity.status === 'accepted' ? 'bg-green-500/10 text-green-400' :
                                                     activity.status === 'processing' ? 'bg-blue-500/10 text-blue-400' :
-                                                        'bg-white/5 text-white/40'}`}>
+                                                        'bg-white/5 text-white/40'
+                                                } `}>
                                                 {activity.status.replace(/_/g, ' ')}
                                             </span>
                                             <span className="text-[9px] text-green-500/30">{new Date(activity.created_at).toLocaleDateString()}</span>
@@ -202,8 +205,8 @@ const AlienProfile = () => {
 };
 
 const StatBox = ({ label, value, icon, highlight }) => (
-    <div className={`p-4 rounded-xl border flex flex-col items-center justify-center text-center gap-2 transition-all
-        ${highlight ? 'bg-green-500/10 border-green-500 text-green-400 shadow-[0_0_15px_rgba(34,197,94,0.1)]' : 'bg-black border-green-500/20 text-green-600'}`}>
+    <div className={`p - 4 rounded - xl border flex flex - col items - center justify - center text - center gap - 2 transition - all
+        ${highlight ? 'bg-green-500/10 border-green-500 text-green-400 shadow-[0_0_15px_rgba(34,197,94,0.1)]' : 'bg-black border-green-500/20 text-green-600'} `}>
         <div className="opacity-50">{icon}</div>
         <div className="text-2xl font-black text-white">{value}</div>
         <div className="text-[9px] uppercase tracking-widest opacity-60">{label}</div>

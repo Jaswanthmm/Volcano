@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { User, Lock, ArrowRight, Shield, AlertCircle, Eye, EyeOff } from 'lucide-react';
+import { API_URL } from '../config';
 
 const AlienLogin = () => {
     const [isLogin, setIsLogin] = useState(true);
@@ -29,7 +30,7 @@ const AlienLogin = () => {
             : { email: formData.email, password: formData.password, name: formData.name };
 
         try {
-            const response = await fetch(`${endpoint}`, {
+            const response = await fetch(`${API_URL}${endpoint}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -57,10 +58,6 @@ const AlienLogin = () => {
                 navigate('/alien/dashboard');
                 alert(`Welcome back, Node ${data.alien_id}`);
             } else {
-                setSuccessMsg(`Uplink Established! Your Node Identifier is: ${data.alien_id}`);
-                setIsLogin(true);
-                setSuccessMsg(`Uplink Established! Your Node Identifier is: ${data.alien_id}`);
-                setIsLogin(true);
                 setSuccessMsg(`Uplink Established! Your Node Identifier is: ${data.alien_id}`);
                 setIsLogin(true);
                 setFormData({ email: '', password: '', identifier: data.alien_id, name: '' });

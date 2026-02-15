@@ -2,9 +2,11 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Box, Lock, ArrowRight, Shield, Building, AlertCircle, Eye, EyeOff } from 'lucide-react';
+import { API_URL } from '../config';
 
 const BoardroomLogin = () => {
     const [isLogin, setIsLogin] = useState(true);
+    // ... (lines 8-38 unchanged) 
     const [formData, setFormData] = useState({ company_name: '', email: '', password: '', website_url: '' });
     const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState('');
@@ -39,7 +41,7 @@ const BoardroomLogin = () => {
         const endpoint = isLogin ? '/api/auth/boardroom/login' : '/api/auth/boardroom/register';
 
         try {
-            const response = await fetch(`${endpoint}`, {
+            const response = await fetch(`${API_URL}${endpoint}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(formData),

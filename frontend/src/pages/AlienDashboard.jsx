@@ -1,7 +1,7 @@
-// Main interface for Aliens to submit ideas and view their status.
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Radio, Send, Database, Shield, LogOut, Loader2, AlertTriangle, CheckCircle2, User, MessageSquare, XCircle, HelpCircle, Activity, Lock } from 'lucide-react';
+import { API_URL } from '../config';
 
 const AlienDashboard = () => {
     const navigate = useNavigate();
@@ -32,7 +32,7 @@ const AlienDashboard = () => {
         setSelectedSignalForChat(signal);
         setShowChatModal(true);
         try {
-            const res = await fetch(`/api/messages/${signal.id}`);
+            const res = await fetch(`${API_URL}/api/messages/${signal.id}`);
             if (res.ok) {
                 setChatMessages(await res.json());
             }
@@ -45,7 +45,7 @@ const AlienDashboard = () => {
         if (!newMessage.trim() || !selectedSignalForChat) return;
         setSendingMsg(true);
         try {
-            const res = await fetch(`/api/messages/`, {
+            const res = await fetch(`${API_URL}/api/messages/`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -112,8 +112,8 @@ const AlienDashboard = () => {
         const fetchData = async () => {
             try {
                 const [ideasRes, companiesRes] = await Promise.all([
-                    fetch(`/api/ideas/my?identifier=${user.alien_id}`),
-                    fetch(`/api/ideas/companies`)
+                    fetch(`${API_URL}/api/ideas/my?identifier=${user.alien_id}`),
+                    fetch(`${API_URL}/api/ideas/companies`)
                 ]);
                 if (ideasRes.ok) setIdeas(await ideasRes.json());
                 if (companiesRes.ok) setCompanies(await companiesRes.json());
@@ -126,7 +126,7 @@ const AlienDashboard = () => {
 
         // 3. Polling for Status Updates (Async Pipeline)
         const interval = setInterval(() => {
-            fetch(`/api/ideas/my?identifier=${user.alien_id}`)
+            fetch(`${API_URL}/api/ideas/my?identifier=${user.alien_id}`)
                 .then(res => res.ok ? res.json() : [])
                 .then(data => {
                     setIdeas(prev => data);
@@ -144,7 +144,7 @@ const AlienDashboard = () => {
             // Immediate fetch on open/change is handled by openChat, but we poll for updates
             chatInterval = setInterval(async () => {
                 try {
-                    const res = await fetch(`/api/messages/${selectedSignalForChat.id}`);
+                    const res = await fetch(`${API_URL}/api/messages/${selectedSignalForChat.id}`);
                     if (res.ok) {
                         const msgs = await res.json();
                         setChatMessages(msgs);
@@ -168,7 +168,7 @@ const AlienDashboard = () => {
         setErrorMessage('');
 
         try {
-            const response = await fetch('/api/ideas/submit', {
+            const response = await fetch(`${API_URL}/api/ideas/submit`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
