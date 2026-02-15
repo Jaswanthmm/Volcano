@@ -134,7 +134,7 @@ const LandingPage = () => {
   const [loopNum, setLoopNum] = useState(0);
 
   useEffect(() => {
-    const words = ["MIND", "THOUGHTS"];
+    const words = ["MIND", "THOUGHTS", "IDEAS"];
     const i = loopNum % words.length;
     const fullText = `YOUR ${words[i]}`;
 
