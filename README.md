@@ -12,11 +12,11 @@ The system is currently live and auto-scaling on Google Cloud Run:
 
 | Interface | URL | Description |
 |-----------|-----|-------------|
-| **Volcano Landing** | [https://volcanolanding-44481511017.europe-west4.run.app](https://volcanolanding-44481511017.europe-west4.run.app) | **Public Entry Point** |
+| **Volcano Landing** | [https://volcanolanding-44481511017.europe-west4.run.app](https://volcanolanding-44481511017.europe-west4.run.app)(Free trai exhasuted) | **Public Entry Point** |
 | **Alien Portal** | [Access via Landing] | Submit signals, view profile, track income |
 | **Boardroom** | [Access via Landing] | Corporate dashboard for filtering and acquiring signals |
-| **Thinking Engine** | [Access via Landing] | Real-time AI processing visualization |
-| **Backend API** | [https://volcano-44481511017.europe-west4.run.app](https://volcano-44481511017.europe-west4.run.app) | API Docs & Health Check |
+| **Thinking Engine** | [Only for Admins] | Real-time AI processing visualization |
+| **Backend API** | [Only for Admins] | To Validate the Backend Flow
 
 ---
 
