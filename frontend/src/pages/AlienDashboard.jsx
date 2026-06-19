@@ -112,8 +112,8 @@ const AlienDashboard = () => {
         const fetchData = async () => {
             try {
                 const [ideasRes, companiesRes] = await Promise.all([
-                    fetch(`${API_URL}/api/ideas/my?identifier=${user.alien_id}`),
-                    fetch(`${API_URL}/api/ideas/companies`)
+                    fetch(`${API_URL}/api/ideas/my?identifier=${user.alien_id}`, { cache: 'no-store' }),
+                    fetch(`${API_URL}/api/ideas/companies`, { cache: 'no-store' })
                 ]);
                 if (ideasRes.ok) setIdeas(await ideasRes.json());
                 if (companiesRes.ok) setCompanies(await companiesRes.json());
@@ -126,10 +126,18 @@ const AlienDashboard = () => {
 
         // 3. Polling for Status Updates (Async Pipeline)
         const interval = setInterval(() => {
-            fetch(`${API_URL}/api/ideas/my?identifier=${user.alien_id}`)
+            fetch(`${API_URL}/api/ideas/my?identifier=${user.alien_id}`, { cache: 'no-store' })
                 .then(res => res.ok ? res.json() : [])
                 .then(data => {
-                    setIdeas(prev => data);
+                    setIdeas(data);
+                });
+            
+            fetch(`${API_URL}/api/ideas/companies`, { cache: 'no-store' })
+                .then(res => res.ok ? res.json() : [])
+                .then(data => {
+                    if (data && data.length > 0) {
+                        setCompanies(data);
+                    }
                 });
         }, 3000); // Poll every 3 seconds
 
