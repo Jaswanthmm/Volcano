@@ -1,12 +1,12 @@
 // Authentication page for Aliens (Register/Login).
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { User, Lock, ArrowRight, Shield, AlertCircle, Eye, EyeOff } from 'lucide-react';
+import { User, Lock, ArrowRight, Shield, AlertCircle, Eye, EyeOff, Phone } from 'lucide-react';
 import { API_URL } from '../config';
 
 const AlienLogin = () => {
     const [isLogin, setIsLogin] = useState(true);
-    const [formData, setFormData] = useState({ email: '', password: '', identifier: '', name: '' });
+    const [formData, setFormData] = useState({ email: '', password: '', identifier: '', name: '', phone: '' });
     const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState('');
     const [successMsg, setSuccessMsg] = useState('');
@@ -27,7 +27,7 @@ const AlienLogin = () => {
         const endpoint = isLogin ? '/api/auth/alien/login' : '/api/auth/alien/register';
         const payload = isLogin
             ? { identifier: formData.identifier, password: formData.password }
-            : { email: formData.email, password: formData.password, name: formData.name };
+            : { email: formData.email, password: formData.password, name: formData.name, phone: formData.phone };
 
         try {
             const response = await fetch(`${API_URL}${endpoint}`, {
@@ -59,7 +59,7 @@ const AlienLogin = () => {
             } else {
                 setSuccessMsg(`Uplink Established! Your Node Identifier is: ${data.alien_id}`);
                 setIsLogin(true);
-                setFormData({ email: '', password: '', identifier: data.alien_id, name: '' });
+                setFormData({ email: '', password: '', identifier: data.alien_id, name: '', phone: '' });
             }
 
         } catch (err) {
@@ -152,6 +152,24 @@ const AlienLogin = () => {
                                     />
                                     <div className="absolute right-3 top-3 text-green-500/20 group-focus-within:text-green-500/50 transition-colors">
                                         <User size={18} />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-[10px] uppercase tracking-widest text-green-500/50 font-bold block">Transmission Commlink (Phone Number)</label>
+                                <div className="relative group">
+                                    <input
+                                        type="tel"
+                                        name="phone"
+                                        value={formData.phone}
+                                        onChange={handleChange}
+                                        className="w-full bg-black/50 border border-green-500/30 rounded-lg px-4 py-3 text-green-400 focus:outline-none focus:border-green-400 transition-colors placeholder-green-900/50 text-sm"
+                                        placeholder="+1 (555) 019-2834"
+                                        autoComplete="tel"
+                                    />
+                                    <div className="absolute right-3 top-3 text-green-500/20 group-focus-within:text-green-500/50 transition-colors">
+                                        <Phone size={18} />
                                     </div>
                                 </div>
                             </div>

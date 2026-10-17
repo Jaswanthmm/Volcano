@@ -56,7 +56,7 @@ const ThinkingEngine = () => {
         if (selectedSignal && selectedSignal.status === 'processing') {
             const fetchLogs = async () => {
                 try {
-                    const res = await fetch(`/api/volcano/logs/${selectedSignal.id}`);
+                    const res = await fetch(`${API_URL}/api/volcano/logs/${selectedSignal.id}`);
                     if (res.ok) {
                         const data = await res.json();
                         setActiveLog(data);

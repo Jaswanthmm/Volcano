@@ -1,13 +1,13 @@
 // Authentication page for Boardroom Titans (Register/Login).
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Building2, Lock, ArrowRight, Shield, Building, AlertCircle, Eye, EyeOff } from 'lucide-react';
+import { Building2, Lock, ArrowRight, Shield, Building, AlertCircle, Eye, EyeOff, Phone } from 'lucide-react';
 import { API_URL } from '../config';
 
 const BoardroomLogin = () => {
     const [isLogin, setIsLogin] = useState(true);
     // ... (lines 8-38 unchanged) 
-    const [formData, setFormData] = useState({ company_name: '', email: '', password: '', website_url: '' });
+    const [formData, setFormData] = useState({ company_name: '', email: '', password: '', website_url: '', phone: '' });
     const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
@@ -66,7 +66,7 @@ const BoardroomLogin = () => {
                 navigate('/boardroom/dashboard');
             } else {
                 setIsLogin(true);
-                setFormData({ company_name: '', email: '', password: '', website_url: '' });
+                setFormData({ company_name: '', email: '', password: '', website_url: '', phone: '' });
             }
 
         } catch (err) {
@@ -153,6 +153,24 @@ const BoardroomLogin = () => {
                                         </div>
                                     </div>
                                 </div>
+
+                                <div className="space-y-2">
+                                    <label className="text-[10px] uppercase tracking-widest text-blue-200/50 font-bold ml-1">Representative Phone Number</label>
+                                    <div className="relative group">
+                                        <input
+                                            type="tel"
+                                            name="phone"
+                                            value={formData.phone}
+                                            onChange={handleChange}
+                                            className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500/50 focus:bg-blue-900/10 transition-all placeholder-white/20 text-sm"
+                                            placeholder="+1 (555) 234-5678"
+                                            autoComplete="tel"
+                                        />
+                                        <div className="absolute right-4 top-3.5 text-white/20 group-focus-within:text-blue-400 transition-colors">
+                                            <Phone size={18} />
+                                        </div>
+                                    </div>
+                                </div>
                             </>
                         )}
 
@@ -198,18 +216,32 @@ const BoardroomLogin = () => {
                             </div>
                         </div>
 
-                        {/* Terms & Conditions (Registration Only) */}
+                        {/* Registration Disclaimers & Representation */}
                         {!isLogin && (
-                            <div className="flex items-center gap-2 mt-4 ml-1">
-                                <input
-                                    type="checkbox"
-                                    id="terms"
-                                    required
-                                    className="w-3 h-3 bg-black/20 border border-blue-200/30 rounded focus:ring-1 focus:ring-blue-500 text-blue-500 cursor-pointer"
-                                />
-                                <label htmlFor="terms" className="text-[9px] text-blue-200/60 uppercase tracking-wide cursor-pointer select-none">
-                                    I accept the <Link to="/terms" target="_blank" className="text-blue-400 hover:text-white transition-colors">Protocol Terms & Conditions</Link>
-                                </label>
+                            <div className="space-y-3 mt-4 ml-1">
+                                <div className="flex items-start gap-2.5">
+                                    <input
+                                        type="checkbox"
+                                        id="corporate-representation"
+                                        required
+                                        className="w-3.5 h-3.5 mt-0.5 bg-black/20 border border-blue-200/30 rounded focus:ring-1 focus:ring-blue-500 text-blue-500 cursor-pointer shrink-0"
+                                    />
+                                    <label htmlFor="corporate-representation" className="text-[10px] text-blue-200/70 tracking-wide cursor-pointer select-none leading-relaxed">
+                                        I confirm that I am an <span className="text-blue-300 font-semibold">authorized representative</span> of this company. I acknowledge that registering with our corporate domain claims sole organization access and prevents any other individuals from creating an account on behalf of this company.
+                                    </label>
+                                </div>
+
+                                <div className="flex items-center gap-2.5">
+                                    <input
+                                        type="checkbox"
+                                        id="terms"
+                                        required
+                                        className="w-3.5 h-3.5 bg-black/20 border border-blue-200/30 rounded focus:ring-1 focus:ring-blue-500 text-blue-500 cursor-pointer shrink-0"
+                                    />
+                                    <label htmlFor="terms" className="text-[10px] text-blue-200/60 uppercase tracking-wide cursor-pointer select-none">
+                                        I accept the <Link to="/terms" target="_blank" className="text-blue-400 hover:text-white transition-colors">Protocol Terms & Conditions</Link>
+                                    </label>
+                                </div>
                             </div>
                         )}
 

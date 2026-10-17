@@ -9,6 +9,7 @@ class User(db.Model):
     username = db.Column(db.String(80), unique=True, nullable=False)
     name = db.Column(db.String(100), nullable=True) # Actual name of the Alien
     email = db.Column(db.String(120), unique=True, nullable=False)
+    phone = db.Column(db.String(30), nullable=True) # Contact Phone Number
     password_hash = db.Column(db.String(255))
     is_verified = db.Column(db.Boolean, default=False)
     # ideas = db.relationship('Idea', backref='author', lazy=True)
@@ -17,6 +18,7 @@ class Company(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     company_name = db.Column(db.String(120), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
+    phone = db.Column(db.String(30), nullable=True) # Representative Phone Number
     password_hash = db.Column(db.String(255))
     is_verified = db.Column(db.Boolean, default=False)
     logo_url = db.Column(db.String(500)) # URL to company logo

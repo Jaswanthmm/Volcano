@@ -18,11 +18,11 @@ def generate_alien_id():
 
 @auth_bp.route('/alien/register', methods=['POST'], strict_slashes=False)
 def register_alien():
-    print(f"DEBUG: Hit register_alien with data: {request.get_json()}", flush=True)
     data = request.get_json()
     email = data.get('email')
     password = data.get('password')
     name = data.get('name') # Optional but requested
+    phone = data.get('phone')
 
     if not email or not password or not name:
         return jsonify({"error": "Email, password, and name are required"}), 400
@@ -39,6 +39,7 @@ def register_alien():
         username=alien_id,
         email=email,
         name=name,
+        phone=phone,
         password_hash=generate_password_hash(password)
     )
 
@@ -49,6 +50,7 @@ def register_alien():
         "message": "Alien registered successfully",
         "alien_id": alien_id,
         "name": name,
+        "phone": phone,
         "role": "alien"
     }), 201
 
@@ -83,6 +85,7 @@ def register_boardroom():
     email = data.get('email')
     password = data.get('password')
     website_url = data.get('website_url')
+    phone = data.get('phone')
 
     if not company_name or not email or not password or not website_url:
         return jsonify({"error": "Company name, email, password, and website URL are required"}), 400
@@ -117,6 +120,7 @@ def register_boardroom():
     new_company = Company(
         company_name=company_name,
         email=email,
+        phone=phone,
         password_hash=generate_password_hash(password),
         logo_url=logo_url,
         website_url=website_url
@@ -130,6 +134,7 @@ def register_boardroom():
         "company_name": company_name,
         "id": new_company.id,
         "logo_url": logo_url,
+        "phone": phone,
         "role": "titan"
     }), 201
 
