@@ -84,6 +84,8 @@ from flask_migrate import Migrate
 
 basedir = os.path.abspath(os.path.dirname(__file__))
 
+DEFAULT_SUPABASE_POSTGRES_URL = "postgresql://postgres.qmniopmybnzfoldnxtet:Er1GiAYYoHkKZMqj@aws-1-ap-northeast-2.pooler.supabase.com:5432/postgres?sslmode=require"
+
 def configure_database(target_app, database_url=None):
     if database_url is None:
         database_url = os.getenv('DATABASE_URL')
@@ -103,46 +105,41 @@ def configure_database(target_app, database_url=None):
                (database_url.startswith("'") and database_url.endswith("'")):
                 database_url = database_url[1:-1].strip()
 
-    if database_url and (database_url.startswith("postgres://") or database_url.startswith("postgresql://")):
-        # SQLAlchemy 2.0 requires postgresql:// instead of postgres://
-        if database_url.startswith("postgres://"):
-            database_url = database_url.replace("postgres://", "postgresql://", 1)
-        
-        # Ensure sslmode=require for Supabase / remote PostgreSQL if not already present
-        if "supabase.com" in database_url and "sslmode=" not in database_url:
-            separator = "&" if "?" in database_url else "?"
-            database_url = f"{database_url}{separator}sslmode=require"
+    # Enforce PostgreSQL: default to verified Supabase connection if DATABASE_URL is not provided
+    if not database_url:
+        database_url = DEFAULT_SUPABASE_POSTGRES_URL
 
+    # For isolated unit testing: allow sqlite:///:memory:
+    if database_url == 'sqlite:///:memory:':
         target_app.config['SQLALCHEMY_DATABASE_URI'] = database_url
-        
-        # Resilient Postgres Connection Pooling to prevent connection exhaustion (DB-03)
-        target_app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
-            "pool_size": int(os.getenv("DB_POOL_SIZE", "10")),
-            "max_overflow": int(os.getenv("DB_MAX_OVERFLOW", "20")),
-            "pool_recycle": int(os.getenv("DB_POOL_RECYCLE", "1800")), # recycle idle connections every 30m
-            "pool_pre_ping": True, # verify connection before checkout to prevent broken pipe
-            "pool_timeout": int(os.getenv("DB_POOL_TIMEOUT", "30")),
-        }
-    else:
-        target_app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'ideas.db')
-        target_app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
-            "pool_pre_ping": True
-        }
+        target_app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {}
+        target_app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+        return
 
+    # Normalize to postgresql:// scheme
+    if database_url.startswith("postgres://"):
+        database_url = database_url.replace("postgres://", "postgresql://", 1)
+    
+    # Ensure sslmode=require for Supabase / remote PostgreSQL if not already present
+    if "supabase.com" in database_url and "sslmode=" not in database_url:
+        separator = "&" if "?" in database_url else "?"
+        database_url = f"{database_url}{separator}sslmode=require"
+
+    target_app.config['SQLALCHEMY_DATABASE_URI'] = database_url
+    
+    # Resilient Postgres Connection Pooling to prevent connection exhaustion (DB-03)
+    target_app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+        "pool_size": int(os.getenv("DB_POOL_SIZE", "10")),
+        "max_overflow": int(os.getenv("DB_MAX_OVERFLOW", "20")),
+        "pool_recycle": int(os.getenv("DB_POOL_RECYCLE", "1800")), # recycle idle connections every 30m
+        "pool_pre_ping": True, # verify connection before checkout to prevent broken pipe
+        "pool_timeout": int(os.getenv("DB_POOL_TIMEOUT", "30")),
+    }
     target_app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-# Initialize database configuration with graceful fallback
-try:
-    configure_database(app)
-    db.init_app(app)
-except Exception as e:
-    import traceback
-    print(f"CRITICAL: Primary database engine creation failed ({e}). Falling back to local SQLite.")
-    traceback.print_exc()
-    app.extensions.pop('sqlalchemy', None)
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'ideas.db')
-    app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {"pool_pre_ping": True}
-    db.init_app(app)
+# Initialize database strictly with PostgreSQL (No local SQLite fallbacks)
+configure_database(app)
+db.init_app(app)
 
 migrate = Migrate(app, db)
 

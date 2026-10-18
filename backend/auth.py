@@ -22,25 +22,28 @@ def generate_alien_id():
     suffix = ''.join(random.choices(string.ascii_uppercase + string.digits, k=4))
     return f"ALIEN-{suffix}"
 
+from sqlalchemy import func
+
 # --- Alien Routes ---
 
 @auth_bp.route('/alien/register', methods=['POST'], strict_slashes=False)
 def register_alien():
     data = request.get_json() or {}
-    email = data.get('email')
-    password = data.get('password')
-    name = data.get('name') # Optional but requested
-    phone = data.get('phone')
+    email = (data.get('email') or '').strip().lower()
+    password = (data.get('password') or '').strip()
+    name = (data.get('name') or '').strip()
+    phone = (data.get('phone') or '').strip()
 
     if not email or not password or not name:
         return jsonify({"error": "Email, password, and name are required"}), 400
 
-    if User.query.filter_by(email=email).first():
+    # Case-insensitive duplicate email check in PostgreSQL
+    if User.query.filter(func.lower(User.email) == email).first():
         return jsonify({"error": "Email already registered"}), 409
 
     # Generate unique Alien ID
     alien_id = generate_alien_id()
-    while User.query.filter_by(username=alien_id).first():
+    while User.query.filter(func.upper(User.username) == alien_id.upper()).first():
         alien_id = generate_alien_id()
 
     new_alien = User(
@@ -65,14 +68,17 @@ def register_alien():
 @auth_bp.route('/alien/login', methods=['POST'])
 def login_alien():
     data = request.get_json() or {}
-    identifier = data.get('identifier') # Can be email or Alien ID
-    password = data.get('password')
+    identifier = (data.get('identifier') or '').strip() # Can be email or Alien ID
+    password = (data.get('password') or '').strip()
 
     if not identifier or not password:
         return jsonify({"error": "Identifier and password are required"}), 400
 
-    # Try to find user by email or username (Alien ID)
-    alien = User.query.filter((User.email == identifier) | (User.username == identifier)).first()
+    # Case-insensitive lookup matching either normalized email or Alien ID (username)
+    alien = User.query.filter(
+        (func.lower(User.email) == identifier.lower()) | 
+        (func.upper(User.username) == identifier.upper())
+    ).first()
 
     if alien and check_password_hash(alien.password_hash, password):
         identity = str(alien.id)
@@ -110,29 +116,29 @@ def login_alien():
 @auth_bp.route('/boardroom/register', methods=['POST'])
 def register_boardroom():
     data = request.get_json() or {}
-    company_name = data.get('company_name')
-    email = data.get('email')
-    password = data.get('password')
-    website_url = data.get('website_url')
-    phone = data.get('phone')
+    company_name = (data.get('company_name') or '').strip()
+    email = (data.get('email') or '').strip().lower()
+    password = (data.get('password') or '').strip()
+    website_url = (data.get('website_url') or '').strip().lower()
+    phone = (data.get('phone') or '').strip()
 
     if not company_name or not email or not password or not website_url:
         return jsonify({"error": "Company name, email, password, and website URL are required"}), 400
 
     # Domain Validation (Email)
-    email_domain = email.split('@')[-1].lower()
+    email_domain = email.split('@')[-1].lower() if '@' in email else ''
     BLACKLISTED_DOMAINS = ['gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com', 'icloud.com', 'aol.com', 'protonmail.com']
     
     if email_domain in BLACKLISTED_DOMAINS:
         return jsonify({"error": "Public email domains are not strictly authorized for Boardroom access. Please use corporate credentials."}), 403
 
-    if Company.query.filter_by(email=email).first():
+    if Company.query.filter(func.lower(Company.email) == email).first():
         return jsonify({"error": "Email already registered"}), 409
     
-    if Company.query.filter_by(company_name=company_name).first():
+    if Company.query.filter(func.lower(Company.company_name) == company_name.lower()).first():
         return jsonify({"error": "Company name already registered"}), 409
 
-    if Company.query.filter_by(website_url=website_url).first():
+    if Company.query.filter(func.lower(Company.website_url) == website_url).first():
         return jsonify({"error": "Company website already verified in our database"}), 409
 
     # Auto-fetch Logo using Website URL
@@ -170,13 +176,13 @@ def register_boardroom():
 @auth_bp.route('/boardroom/login', methods=['POST'])
 def login_boardroom():
     data = request.get_json() or {}
-    email = data.get('email')
-    password = data.get('password')
+    email = (data.get('email') or '').strip().lower()
+    password = (data.get('password') or '').strip()
 
     if not email or not password:
         return jsonify({"error": "Email and password are required"}), 400
 
-    company = Company.query.filter_by(email=email).first()
+    company = Company.query.filter(func.lower(Company.email) == email).first()
 
     if company and check_password_hash(company.password_hash, password):
         identity = str(company.id)
@@ -273,7 +279,7 @@ def get_current_user_profile():
     role = claims.get('role')
 
     if role == 'alien':
-        user = User.query.get(int(identity))
+        user = db.session.get(User, int(identity))
         if not user:
             return jsonify({"error": "User not found"}), 404
         return jsonify({
@@ -284,7 +290,7 @@ def get_current_user_profile():
             "role": "alien"
         }), 200
     elif role == 'titan':
-        company = Company.query.get(int(identity))
+        company = db.session.get(Company, int(identity))
         if not company:
             return jsonify({"error": "Company not found"}), 404
         return jsonify({

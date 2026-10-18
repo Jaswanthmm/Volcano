@@ -4,6 +4,7 @@ import os
 import json
 
 # Ensure test database and secrets are configured
+os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
 os.environ['JWT_SECRET_KEY'] = 'test-secret-jwt-key-32-bytes-long-for-hmac-sha256!'
 os.environ['VOLCANO_ADMIN_KEY'] = 'test_volcano_admin'
 os.environ['ALLOWED_ORIGINS'] = 'http://localhost:5173,http://localhost:3000'

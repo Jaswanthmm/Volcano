@@ -5,6 +5,7 @@ import json
 import time
 from unittest.mock import MagicMock, patch
 
+os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
 os.environ['JWT_SECRET_KEY'] = 'test-secret-jwt-key-32-bytes-long-for-hmac-sha256!'
 os.environ['VOLCANO_ADMIN_KEY'] = 'test_volcano_admin'
 os.environ['ASYNC_DISPATCH_LOCAL'] = 'false' # Do not auto-spawn worker threads during unit test
