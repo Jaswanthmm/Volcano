@@ -9,12 +9,12 @@ This tracker monitors all tasks required to transition Volcano from demonstratio
 | Phase | Category | Total Tasks | Completed | In Progress | Pending | Status |
 |---|---|:---:|:---:|:---:|:---:|:---:|
 | Phase 1 | Security & Authentication (P0) | 5 | 5 | 0 | 0 | 🟢 Completed |
-| **Phase 2** | AI Pipeline & Asynchronous Workers (P0) | 4 | 4 | 0 | 0 | 🟢 Completed |
+| **Phase 2** | AI Pipeline & Asynchronous Workers (P0) | 5 | 5 | 0 | 0 | 🟢 Completed |
 | **Phase 3** | Database & Infrastructure Hardening (P1) | 4 | 4 | 0 | 0 | 🟢 Completed |
 | **Phase 4** | Frontend Optimization & Protected Routes (P1) | 4 | 4 | 0 | 0 | 🟢 Completed |
 | **Phase 5** | Observability, Testing & CI/CD (P2) | 4 | 1 | 0 | 3 | ⏸️ Paused |
 | **PROD** | **GCP Cloud Run Production Deployment** | 5 | 5 | 0 | 0 | 🟢 Completed |
-| **TOTAL** | | **26** | **23** | **0** | **3** | **🎉 Live in Production** |
+| **TOTAL** | | **27** | **24** | **0** | **3** | **🎉 Live in Production** |
 
 ---
 
@@ -72,6 +72,11 @@ This tracker monitors all tasks required to transition Volcano from demonstratio
   - **Component:** `backend/requirements.txt`
   - **Details:** Add missing `langsmith` package and pin all backend dependencies to specific verified versions.
   - **Acceptance Criteria:** Clean `pip install -r requirements.txt` succeeds and runs in fresh Docker container without module errors.
+
+- [x] **`WORK-05`**: **User-Facing Error Sanitization & Gemini 3.8 Upgrade**
+  - **Component:** `backend/worker.py`, `backend/agents.py`, `backend/test_phase2_worker.py`
+  - **Details:** Upgrade default model to `gemini-3.8-flash`. Implement `sanitize_user_feedback()` to prevent leaking internal stack traces, HTTP status codes, or provider JSON payloads to end users in chat inboxes. Persist full technical logs strictly in `ai_analysis_log` for admin audit.
+  - **Acceptance Criteria:** End users receive clean, professional status updates; internal technical diagnostics remain accessible only to admins in Thinking Engine logs.
 
 ---
 
