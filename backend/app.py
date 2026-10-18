@@ -139,6 +139,7 @@ except Exception as e:
     import traceback
     print(f"CRITICAL: Primary database engine creation failed ({e}). Falling back to local SQLite.")
     traceback.print_exc()
+    app.extensions.pop('sqlalchemy', None)
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'ideas.db')
     app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {"pool_pre_ping": True}
     db.init_app(app)
