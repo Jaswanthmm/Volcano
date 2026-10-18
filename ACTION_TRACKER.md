@@ -10,11 +10,11 @@ This tracker monitors all tasks required to transition Volcano from demonstratio
 |---|---|:---:|:---:|:---:|:---:|:---:|
 | Phase 1 | Security & Authentication (P0) | 5 | 5 | 0 | 0 | 🟢 Completed |
 | **Phase 2** | AI Pipeline & Asynchronous Workers (P0) | 5 | 5 | 0 | 0 | 🟢 Completed |
-| **Phase 3** | Database & Infrastructure Hardening (P1) | 4 | 4 | 0 | 0 | 🟢 Completed |
+| **Phase 3** | Database & Infrastructure Hardening (P1) | 5 | 5 | 0 | 0 | 🟢 Completed |
 | **Phase 4** | Frontend Optimization & Protected Routes (P1) | 4 | 4 | 0 | 0 | 🟢 Completed |
 | **Phase 5** | Observability, Testing & CI/CD (P2) | 4 | 1 | 0 | 3 | ⏸️ Paused |
 | **PROD** | **GCP Cloud Run Production Deployment** | 5 | 5 | 0 | 0 | 🟢 Completed |
-| **TOTAL** | | **27** | **24** | **0** | **3** | **🎉 Live in Production** |
+| **TOTAL** | | **28** | **25** | **0** | **3** | **🎉 Live in Production** |
 
 ---
 
@@ -106,6 +106,11 @@ This tracker monitors all tasks required to transition Volcano from demonstratio
   - **Component:** `backend/Dockerfile`, `frontend/Dockerfile`
   - **Details:** Ensure minimal image footprint, non-root user execution, and fast layer caching.
   - **Acceptance Criteria:** Containers build cleanly and pass vulnerability scanning.
+
+- [x] **`DB-05`**: **Strict PostgreSQL Enforcement & Auth Normalization**
+  - **Component:** `backend/app.py`, `backend/auth.py`, `backend/test_phase1_security.py`
+  - **Details:** Eliminate all local SQLite fallbacks from `app.py`. Default directly to Supabase PostgreSQL pooler. Delete local `ideas.db`. Normalize emails (`.strip().lower()`) and employ case-insensitive SQL matching (`func.lower(User.email)` and `func.upper(User.username)`) to prevent duplicate registrations and login mismatches. Isolate pytest runs strictly to in-memory SQLite.
+  - **Acceptance Criteria:** PostgreSQL is enforced everywhere; case-insensitive logins and registrations work consistently; tests never drop production tables.
 
 ---
 
