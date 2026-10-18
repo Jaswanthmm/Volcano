@@ -15,10 +15,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-# Upgrade pip and build wheels
+# Create standalone virtual environment
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+# Upgrade pip and install all dependencies (including transitive ones like alembic)
 COPY requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip && \
-    pip wheel --no-cache-dir --no-deps --wheel-dir /build/wheels -r requirements.txt
+    pip install --no-cache-dir -r requirements.txt
 
 # --- Stage 2: Minimal Non-Root Runtime ---
 FROM python:3.12-slim AS runner
@@ -38,10 +42,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy pre-compiled wheels from builder and install
-COPY --from=builder /build/wheels /wheels
-RUN pip install --no-cache-dir --no-index --find-links=/wheels /wheels/* && \
-    rm -rf /wheels
+# Copy complete virtual environment from builder
+COPY --from=builder /opt/venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
 
 # Copy application source code
 COPY --chown=${USER}:${USER} . .
