@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BrainCircuit, Activity, ShieldAlert, Cpu, CheckCircle2, XCircle, Clock, Server, Eye, Zap } from 'lucide-react';
+import { BrainCircuit, Activity, ShieldAlert, Cpu, CheckCircle2, XCircle, Clock, Server, Eye, Zap, LogOut } from 'lucide-react';
 import { API_URL } from '../config';
+import { getAuthToken, clearAuthSession } from '../utils/auth';
 
 const ThinkingEngine = () => {
     const navigate = useNavigate();
@@ -11,26 +12,36 @@ const ThinkingEngine = () => {
     const [loading, setLoading] = useState(true);
     const [activeLog, setActiveLog] = useState(null); // Moved up
 
-    /*
     useEffect(() => {
-        try {
-            const token = localStorage.getItem('thinking_engine_token');
-            if (!token) {
-                navigate('/thinking-engine/login');
-            }
-        } catch (e) {
-            console.error("Auth Token Access Error", e);
+        const token = getAuthToken('admin');
+        if (!token) {
             navigate('/thinking-engine/login');
         }
     }, [navigate]);
-    */
 
     const fetchData = async () => {
+        const token = getAuthToken('admin');
+        if (!token) {
+            navigate('/thinking-engine/login');
+            return;
+        }
+
         try {
+            const authHeaders = {
+                'Authorization': `Bearer ${token}`,
+                'Accept': 'application/json'
+            };
+
             const [streamRes, statsRes] = await Promise.all([
-                fetch(`${API_URL}/api/volcano/stream`),
-                fetch(`${API_URL}/api/volcano/stats`)
+                fetch(`${API_URL}/api/volcano/stream`, { headers: authHeaders }),
+                fetch(`${API_URL}/api/volcano/stats`, { headers: authHeaders })
             ]);
+
+            if (streamRes.status === 401 || streamRes.status === 403) {
+                clearAuthSession('admin');
+                navigate('/thinking-engine/login?session_expired=true');
+                return;
+            }
 
             if (streamRes.ok) {
                 const streamData = await streamRes.json();
@@ -55,8 +66,16 @@ const ThinkingEngine = () => {
         let logInterval;
         if (selectedSignal && selectedSignal.status === 'processing') {
             const fetchLogs = async () => {
+                const token = getAuthToken('admin');
+                if (!token) return;
+
                 try {
-                    const res = await fetch(`${API_URL}/api/volcano/logs/${selectedSignal.id}`);
+                    const res = await fetch(`${API_URL}/api/volcano/logs/${selectedSignal.id}`, {
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Accept': 'application/json'
+                        }
+                    });
                     if (res.ok) {
                         const data = await res.json();
                         setActiveLog(data);
@@ -111,23 +130,37 @@ const ThinkingEngine = () => {
                     </div>
                 </div>
 
-                <div className="flex gap-8 text-[10px] uppercase tracking-widest font-bold">
-                    <div className="flex flex-col items-center">
-                        <span className="text-white/40">Total Signals</span>
-                        <span className="text-xl text-white">{stats?.total || 0}</span>
+                <div className="flex items-center gap-8">
+                    <div className="flex gap-8 text-[10px] uppercase tracking-widest font-bold">
+                        <div className="flex flex-col items-center">
+                            <span className="text-white/40">Total Signals</span>
+                            <span className="text-xl text-white">{stats?.total || 0}</span>
+                        </div>
+                        <div className="flex flex-col items-center">
+                            <span className="text-white/40">Processing</span>
+                            <span className="text-xl text-yellow-500">{stats?.processing || 0}</span>
+                        </div>
+                        <div className="flex flex-col items-center">
+                            <span className="text-white/40">Rejected</span>
+                            <span className="text-xl text-red-500">{stats?.rejected || 0}</span>
+                        </div>
+                        <div className="flex flex-col items-center">
+                            <span className="text-white/40">Approved</span>
+                            <span className="text-xl text-cyan-500">{stats?.approved || 0}</span>
+                        </div>
                     </div>
-                    <div className="flex flex-col items-center">
-                        <span className="text-white/40">Processing</span>
-                        <span className="text-xl text-yellow-500">{stats?.processing || 0}</span>
-                    </div>
-                    <div className="flex flex-col items-center">
-                        <span className="text-white/40">Rejected</span>
-                        <span className="text-xl text-red-500">{stats?.rejected || 0}</span>
-                    </div>
-                    <div className="flex flex-col items-center">
-                        <span className="text-white/40">Approved</span>
-                        <span className="text-xl text-cyan-500">{stats?.approved || 0}</span>
-                    </div>
+
+                    <button
+                        onClick={() => {
+                            clearAuthSession('admin');
+                            navigate('/thinking-engine/login');
+                        }}
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-red-900/20 border border-red-500/40 hover:bg-red-900/40 text-red-400 rounded text-[10px] tracking-widest uppercase transition-colors"
+                        title="Disconnect Admin Session"
+                    >
+                        <LogOut size={12} />
+                        Disconnect
+                    </button>
                 </div>
             </div>
 

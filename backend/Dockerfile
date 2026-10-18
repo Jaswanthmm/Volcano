@@ -1,27 +1,63 @@
-# Use the official Python image
-FROM python:3.10-slim
+# ==============================================================================
+# Multi-Stage Hardened Dockerfile for Volcano Backend
+# Targets: Google Cloud Run / Enterprise Kubernetes
+# ==============================================================================
 
-# Set the working directory
-WORKDIR /app
+# --- Stage 1: Build & Dependency Compilation ---
+FROM python:3.12-slim AS builder
 
-# Copy requirements file
-COPY requirements.txt .
+WORKDIR /build
 
-# Install system dependencies for Postgres
-RUN apt-get update && apt-get install -y \
+# Install build dependencies for compiling psycopg2 and C extensions
+RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     libpq-dev \
+    build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-# Install dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+# Upgrade pip and build wheels
+COPY requirements.txt .
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip wheel --no-cache-dir --no-deps --wheel-dir /build/wheels -r requirements.txt
 
-# Copy the rest of the application code
-COPY . .
+# --- Stage 2: Minimal Non-Root Runtime ---
+FROM python:3.12-slim AS runner
 
-# Expose the port (Cloud Run sets this env var, default 8080)
+# Create non-privileged service user and group
+ENV USER=volcano
+ENV UID=10001
+ENV GID=10001
+RUN groupadd -g ${GID} ${USER} && \
+    useradd -u ${UID} -g ${GID} -s /bin/bash -m ${USER}
+
+WORKDIR /app
+
+# Install runtime library for PostgreSQL without dev headers or compiler
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libpq5 \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy pre-compiled wheels from builder and install
+COPY --from=builder /build/wheels /wheels
+RUN pip install --no-cache-dir --no-index --find-links=/wheels /wheels/* && \
+    rm -rf /wheels
+
+# Copy application source code
+COPY --chown=${USER}:${USER} . .
+
+# Ensure app directories are owned by non-root user
+RUN chown -R ${USER}:${USER} /app
+
+# Switch to non-root execution
+USER ${UID}:${GID}
+
+# Cloud Run injects PORT environment variable (default: 8080)
 ENV PORT=8080
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
 
-# Command to run the application using Gunicorn
-# app:app refers to 'app.py' file and 'app' flask instance
-CMD exec gunicorn --bind :$PORT --workers 1 --threads 8 --timeout 0 app:app
+EXPOSE ${PORT}
+
+# Gunicorn production execution with signal trapping
+CMD exec gunicorn --bind :$PORT --workers 2 --threads 4 --timeout 120 --access-logfile - --error-logfile - app:app

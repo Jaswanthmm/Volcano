@@ -1,0 +1,16 @@
+steps:
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '--build-arg'
+      - 'VITE_API_URL=${_API_URL}'
+      - '-t'
+      - '${_IMAGE_NAME}'
+      - '.'
+
+images:
+  - '${_IMAGE_NAME}'
+
+substitutions:
+  _API_URL: 'http://localhost:8001'
+  _IMAGE_NAME: 'volcano-frontend:latest'

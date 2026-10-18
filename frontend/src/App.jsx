@@ -15,6 +15,7 @@ import BoardroomProfile from './pages/BoardroomProfile';
 import Terms from './pages/Terms';
 import ErrorBoundary from './components/ErrorBoundary';
 import SessionManager from './components/SessionManager';
+import ProtectedRoute from './components/ProtectedRoute';
 
 function App() {
   return (
@@ -27,8 +28,24 @@ function App() {
           {/* Supporting both shark and titan routes for backward compatibility/new naming */}
           <Route path="/login/boardroom" element={<BoardroomLogin />} />
           <Route path="/login/titan" element={<BoardroomLogin />} />
-          <Route path="/alien/dashboard" element={<AlienDashboard />} />
-          <Route path="/boardroom/dashboard" element={<BoardroomDashboard />} />
+
+          {/* Protected Dashboard Routes (FE-03) */}
+          <Route 
+            path="/alien/dashboard" 
+            element={
+              <ProtectedRoute role="alien">
+                <AlienDashboard />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/boardroom/dashboard" 
+            element={
+              <ProtectedRoute role="titan">
+                <BoardroomDashboard />
+              </ProtectedRoute>
+            } 
+          />
 
           {/* Profile Routes */}
           <Route path="/alien/:id" element={<AlienProfile />} />
@@ -36,8 +53,22 @@ function App() {
 
           {/* Thinking Engine Routes */}
           <Route path="/thinking-engine/login" element={<ThinkingEngineLogin />} />
-          <Route path="/thinking-engine" element={<ThinkingEngine />} />
-          <Route path="/volcano" element={<ThinkingEngine />} /> {/* Alias for backward compatibility */}
+          <Route 
+            path="/thinking-engine" 
+            element={
+              <ProtectedRoute role="admin">
+                <ThinkingEngine />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/volcano" 
+            element={
+              <ProtectedRoute role="admin">
+                <ThinkingEngine />
+              </ProtectedRoute>
+            } 
+          />
           <Route path="/terms" element={<Terms />} />
         </Routes>
       </ErrorBoundary>

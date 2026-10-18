@@ -1,7 +1,7 @@
-# AI Agent Swarm definition: Core logic for Gatekeeper, Detective, Historian, Visionary.
 import os
 import json
 import time
+import random
 from google import genai
 from google.genai.types import Tool, GenerateContentConfig, GoogleSearch
 from langsmith import wrappers
@@ -16,46 +16,90 @@ load_dotenv()
 # Even though we have 1 agent, we will map its steps to the UI for visualization.
 from shared_state import ACTIVE_LOGS
 
-# --- AGENT LOGGING ---
+# --- AGENT LOGGING (WORK-02 Distributed Logging) ---
 class AgentLog:
     def __init__(self, idea_id=None):
         """Initializes the agent log, tracking start time and associating with an Idea ID."""
         self.logs = []
         self.start_time = time.time()
         self.idea_id = idea_id
-        # If an idea ID is provided, initialize the shared UI state with simulated agent steps
         if self.idea_id:
-            # UI Expects a list of agents. We create "Virtual Steps" to show progress.
-            ACTIVE_LOGS[self.idea_id] = {
-                "agents": ["Read & Validate", "Compare Database", "Search & Verify", "Final Verdict"],
-                "current_agent": "Read & Validate",
-                "logs": []
-            }
+            if hasattr(ACTIVE_LOGS, 'set_initial'):
+                ACTIVE_LOGS.set_initial(self.idea_id, current_agent="Read & Validate")
+            else:
+                ACTIVE_LOGS[self.idea_id] = {
+                    "agents": ["Read & Validate", "Compare Database", "Search & Verify", "Final Verdict"],
+                    "current_agent": "Read & Validate",
+                    "logs": []
+                }
 
     def update_step(self, step_name):
-        """Updates the current processing step for the active idea in the UI state."""
-        # Only update the step if the idea ID exists and is actively tracked in memory
-        if self.idea_id and self.idea_id in ACTIVE_LOGS:
-            ACTIVE_LOGS[self.idea_id]["current_agent"] = step_name
+        """Updates the current processing step for the active idea across distributed stores."""
+        if self.idea_id:
+            if hasattr(ACTIVE_LOGS, 'update_step'):
+                ACTIVE_LOGS.update_step(self.idea_id, step_name)
+            elif self.idea_id in ACTIVE_LOGS:
+                ACTIVE_LOGS[self.idea_id]["current_agent"] = step_name
 
     def add(self, status, message):
-        """Records a timestamped log entry and pushes it to the live UI view."""
+        """Records a timestamped log entry and pushes it to distributed storage."""
         timestamp = time.time() - self.start_time
         entry = f"[{timestamp:.1f}s] {status}: {message}"
         self.logs.append(entry)
         print(entry)
         
-        # Live Update
-        # If tracking is active, append the new log entry onto the UI state's logs array
-        if self.idea_id and self.idea_id in ACTIVE_LOGS:
-            ACTIVE_LOGS[self.idea_id]["logs"].append(entry)
+        if self.idea_id:
+            if hasattr(ACTIVE_LOGS, 'append_log'):
+                ACTIVE_LOGS.append_log(self.idea_id, entry)
+            elif self.idea_id in ACTIVE_LOGS:
+                ACTIVE_LOGS[self.idea_id]["logs"].append(entry)
 
     def get_full_log(self):
         """Returns the complete sequence of logs as a string and cleans up the active tracking state."""
-        # If the log is actively tracked, remove it from memory to indicate completion
-        if self.idea_id and self.idea_id in ACTIVE_LOGS:
-            del ACTIVE_LOGS[self.idea_id]
+        if self.idea_id:
+            if hasattr(ACTIVE_LOGS, 'clear_idea'):
+                ACTIVE_LOGS.clear_idea(self.idea_id)
+            elif self.idea_id in ACTIVE_LOGS:
+                del ACTIVE_LOGS[self.idea_id]
         return "\n".join(self.logs)
+
+
+# --- GEMINI EXPONENTIAL BACKOFF & JITTER (WORK-03) ---
+def generate_content_with_retry(client, contents, config, model='gemini-2.0-flash', max_retries=4, initial_backoff=2.0, log=None):
+    """
+    Executes Gemini content generation wrapped with exponential backoff and jitter for 429 and 503 errors (WORK-03).
+    Surges in traffic gracefully queue and retry rather than failing with unhandled exceptions.
+    """
+    backoff = initial_backoff
+    last_err = None
+
+    for attempt in range(1, max_retries + 1):
+        try:
+            return client.models.generate_content(
+                model=model,
+                contents=contents,
+                config=config
+            )
+        except Exception as e:
+            last_err = e
+            err_str = str(e).lower()
+            is_rate_limit = any(term in err_str for term in ['429', 'resource_exhausted', 'quota', 'rate limit', 'too many requests'])
+            is_transient = any(term in err_str for term in ['503', 'unavailable', 'overloaded', 'deadline exceeded', 'timeout'])
+
+            if (is_rate_limit or is_transient) and attempt < max_retries:
+                # Add jitter (+/- 25%) to prevent thundering herd
+                jitter = random.uniform(0.75, 1.25)
+                sleep_secs = backoff * jitter
+                warning_msg = f"Gemini API rate limit/transient error ({e}). Backing off for {sleep_secs:.2f}s (attempt {attempt}/{max_retries})..."
+                if log:
+                    log.add("RETRY", warning_msg)
+                print(f"[agents] {warning_msg}")
+                time.sleep(sleep_secs)
+                backoff *= 2.0
+            else:
+                raise e
+
+    raise last_err
 
 
 # --- SUPER AGENT (The Thinking Engine) ---
@@ -155,14 +199,15 @@ def run_super_agent(title, content, company_name, recent_ideas, log):
         log.add("STEP 6", "Checking External Knowledge (Google Search)...")
         log.update_step("Search & Verify")
 
-        response = client.models.generate_content(
-            model='gemini-2.0-flash', 
+        # Invoke Gemini with exponential backoff and jitter (WORK-03)
+        response = generate_content_with_retry(
+            client=client,
             contents=user_prompt,
             config=GenerateContentConfig(
                 tools=[Tool(google_search=GoogleSearch())], 
-                # response_mime_type='application/json', # REMOVED: Incompatible with Search Tool
                 system_instruction=system_instruction
-            )
+            ),
+            log=log
         )
         
         # Parse Response (Handle Markdown Code Blocks & Free Text)

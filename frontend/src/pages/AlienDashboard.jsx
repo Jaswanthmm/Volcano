@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Radio, Send, Database, Shield, LogOut, Loader2, AlertTriangle, CheckCircle2, User, MessageSquare, XCircle, HelpCircle, Activity, Lock } from 'lucide-react';
 import { API_URL } from '../config';
+import { getAuthToken, getAuthUser, clearAuthSession } from '../utils/auth';
 
 const AlienDashboard = () => {
     const navigate = useNavigate();
@@ -32,7 +33,13 @@ const AlienDashboard = () => {
         setSelectedSignalForChat(signal);
         setShowChatModal(true);
         try {
-            const res = await fetch(`${API_URL}/api/messages/${signal.id}`);
+            const token = getAuthToken('alien');
+            const res = await fetch(`${API_URL}/api/messages/${signal.id}`, {
+                headers: {
+                    'Accept': 'application/json',
+                    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                }
+            });
             if (res.ok) {
                 setChatMessages(await res.json());
             }
@@ -45,9 +52,14 @@ const AlienDashboard = () => {
         if (!newMessage.trim() || !selectedSignalForChat) return;
         setSendingMsg(true);
         try {
+            const token = getAuthToken('alien');
             const res = await fetch(`${API_URL}/api/messages/`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                },
                 body: JSON.stringify({
                     idea_id: selectedSignalForChat.id,
                     sender_type: 'alien',
@@ -89,32 +101,38 @@ const AlienDashboard = () => {
     }, [ideas]);
 
     useEffect(() => {
-        // 1. Auth Check
-        const storedUser = localStorage.getItem('alien_user');
-        if (!storedUser) {
+        // 1. Auth Check (FE-02)
+        const authUser = getAuthUser('alien');
+        const token = getAuthToken('alien');
+        if (!authUser || !token) {
+            clearAuthSession('alien');
             navigate('/login/alien');
             return;
         }
-        try {
-            const parsedUser = JSON.parse(storedUser);
-            setUser(parsedUser);
-        } catch (e) {
-            console.error("Auth Data Corrupted", e);
-            localStorage.removeItem('alien_user');
-            navigate('/login/alien');
-        }
+        setUser(authUser);
     }, [navigate]);
 
     useEffect(() => {
         if (!user) return;
 
         // 2. Fetch Data (Initial Load)
+        const token = getAuthToken('alien');
+        const authHeaders = token ? { 'Authorization': `Bearer ${token}` } : {};
+
         const fetchData = async () => {
             try {
                 const [ideasRes, companiesRes] = await Promise.all([
-                    fetch(`${API_URL}/api/ideas/my?identifier=${user.alien_id}`, { cache: 'no-store' }),
+                    fetch(`${API_URL}/api/ideas/my`, { 
+                        cache: 'no-store',
+                        headers: { ...authHeaders, 'Accept': 'application/json' }
+                    }),
                     fetch(`${API_URL}/api/ideas/companies`, { cache: 'no-store' })
                 ]);
+                if (ideasRes.status === 401) {
+                    clearAuthSession('alien');
+                    navigate('/login/alien?session_expired=true');
+                    return;
+                }
                 if (ideasRes.ok) setIdeas(await ideasRes.json());
                 if (companiesRes.ok) setCompanies(await companiesRes.json());
             } finally {
@@ -126,11 +144,25 @@ const AlienDashboard = () => {
 
         // 3. Polling for Status Updates (Async Pipeline)
         const interval = setInterval(() => {
-            fetch(`${API_URL}/api/ideas/my?identifier=${user.alien_id}`, { cache: 'no-store' })
-                .then(res => res.ok ? res.json() : [])
+            const currentToken = getAuthToken('alien');
+            if (!currentToken) return;
+
+            fetch(`${API_URL}/api/ideas/my`, { 
+                cache: 'no-store',
+                headers: { 'Authorization': `Bearer ${currentToken}`, 'Accept': 'application/json' }
+            })
+                .then(res => {
+                    if (res.status === 401) {
+                        clearAuthSession('alien');
+                        navigate('/login/alien?session_expired=true');
+                        return [];
+                    }
+                    return res.ok ? res.json() : [];
+                })
                 .then(data => {
-                    setIdeas(data);
-                });
+                    if (data) setIdeas(data);
+                })
+                .catch(err => console.error("Poll Error", err));
             
             fetch(`${API_URL}/api/ideas/companies`, { cache: 'no-store' })
                 .then(res => res.ok ? res.json() : [])
@@ -138,12 +170,13 @@ const AlienDashboard = () => {
                     if (data && data.length > 0) {
                         setCompanies(data);
                     }
-                });
+                })
+                .catch(err => console.error("Poll Companies Error", err));
         }, 3000); // Poll every 3 seconds
 
         return () => clearInterval(interval);
 
-    }, [user]);
+    }, [user, navigate]);
 
     // 4. Polling for Chat Messages (Real-time Uplink)
     useEffect(() => {
@@ -166,8 +199,7 @@ const AlienDashboard = () => {
     }, [showChatModal, selectedSignalForChat]);
 
     const handleLogout = () => {
-        localStorage.removeItem('alien_token');
-        localStorage.removeItem('alien_user');
+        clearAuthSession('alien');
         navigate('/');
     };
     const handleSubmit = async (e) => {
@@ -175,10 +207,16 @@ const AlienDashboard = () => {
         setSubmitStatus('sending');
         setErrorMessage('');
 
+        const token = getAuthToken('alien');
+
         try {
             const response = await fetch(`${API_URL}/api/ideas/submit`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                },
                 body: JSON.stringify({
                     title,
                     content,

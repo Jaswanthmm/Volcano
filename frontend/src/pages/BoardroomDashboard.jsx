@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Radio, Send, Database, Shield, LogOut, Loader2, AlertTriangle, CheckCircle2, Building, MessageSquare, XCircle, HelpCircle, Activity, Lock, Users, Briefcase, Search, Clock, Building2, User, Zap, Star } from 'lucide-react';
 import { API_URL } from '../config';
+import { getAuthToken, getAuthUser, clearAuthSession } from '../utils/auth';
 
 const BoardroomDashboard = () => {
     const navigate = useNavigate();
@@ -30,7 +31,13 @@ const BoardroomDashboard = () => {
         setShowChatModal(true);
         // Fetch messages
         try {
-            const res = await fetch(`${API_URL}/api/messages/${selectedSignal.id}`);
+            const token = getAuthToken('titan');
+            const res = await fetch(`${API_URL}/api/messages/${selectedSignal.id}`, {
+                headers: {
+                    'Accept': 'application/json',
+                    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                }
+            });
             if (res.ok) {
                 setChatMessages(await res.json());
             }
@@ -43,9 +50,14 @@ const BoardroomDashboard = () => {
         if (!newMessage.trim() || !selectedSignal) return;
         setSendingMsg(true);
         try {
+            const token = getAuthToken('titan');
             const res = await fetch(`${API_URL}/api/messages/`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                },
                 body: JSON.stringify({
                     idea_id: selectedSignal.id,
                     sender_type: 'titan',
@@ -70,20 +82,31 @@ const BoardroomDashboard = () => {
     };
 
     useEffect(() => {
-        const storedUser = localStorage.getItem('titan_user');
-        if (!storedUser) {
+        const companyData = getAuthUser('titan');
+        const titanToken = getAuthToken('titan');
+        if (!companyData || !titanToken) {
+            clearAuthSession('titan');
             navigate('/login/boardroom');
             return;
         }
-        const companyData = JSON.parse(storedUser);
         setCompany(companyData);
+
+        const authHeaders = { 
+            'Authorization': `Bearer ${titanToken}`, 
+            'Accept': 'application/json' 
+        };
 
         // Fetch Data Parallel
         Promise.all([
-            fetch(`${API_URL}/api/ideas/company/${companyData.id}`),
+            fetch(`${API_URL}/api/ideas/company/${companyData.id}`, { headers: authHeaders }),
             fetch(`${API_URL}/api/users/aliens`)
         ])
             .then(async ([signalsRes, aliensRes]) => {
+                if (signalsRes.status === 401) {
+                    clearAuthSession('titan');
+                    navigate('/login/boardroom?session_expired=true');
+                    return;
+                }
                 if (signalsRes.ok) {
                     const signalData = await signalsRes.json();
                     setSignals(signalData);
@@ -101,12 +124,31 @@ const BoardroomDashboard = () => {
     const handleStatusUpdate = async (status) => {
         if (!selectedSignal) return;
 
+        const titanToken = getAuthToken('titan');
+        if (!titanToken) {
+            clearAuthSession('titan');
+            navigate('/login/boardroom?session_expired=true');
+            return;
+        }
+
+        const authHeaders = { 
+            'Authorization': `Bearer ${titanToken}`,
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+        };
+
         try {
             const res = await fetch(`${API_URL}/api/ideas/${selectedSignal.id}/status`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: authHeaders,
                 body: JSON.stringify({ status })
             });
+
+            if (res.status === 401) {
+                clearAuthSession('titan');
+                navigate('/login/boardroom?session_expired=true');
+                return;
+            }
 
             if (res.ok) {
                 const updatedSignals = signals.map(s =>
@@ -148,8 +190,7 @@ const BoardroomDashboard = () => {
     };
 
     const handleLogout = () => {
-        localStorage.removeItem('titan_token');
-        localStorage.removeItem('titan_user');
+        clearAuthSession('titan');
         navigate('/');
     };
 

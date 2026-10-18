@@ -1,8 +1,9 @@
 // Authentication page for Aliens (Register/Login).
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { User, Lock, ArrowRight, Shield, AlertCircle, Eye, EyeOff, Phone } from 'lucide-react';
 import { API_URL } from '../config';
+import { setAuthSession, isAuthenticated } from '../utils/auth';
 
 const AlienLogin = () => {
     const [isLogin, setIsLogin] = useState(true);
@@ -12,6 +13,23 @@ const AlienLogin = () => {
     const [successMsg, setSuccessMsg] = useState('');
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
+    const location = useLocation();
+
+    useEffect(() => {
+        // If already authenticated with valid JWT, bounce directly to dashboard
+        if (isAuthenticated('alien')) {
+            const redirectPath = location.state?.from?.pathname || '/alien/dashboard';
+            navigate(redirectPath, { replace: true });
+            return;
+        }
+
+        const params = new URLSearchParams(location.search);
+        if (params.get('session_expired')) {
+            setError('Neural uplink expired. Please sign in again.');
+        } else if (params.get('timeout')) {
+            setError('Session timed out due to inactivity. Please reconnect.');
+        }
+    }, [navigate, location]);
 
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -53,9 +71,10 @@ const AlienLogin = () => {
             }
 
             if (isLogin) {
-                localStorage.setItem('alien_token', 'mock_token');
-                localStorage.setItem('alien_user', JSON.stringify(data));
-                navigate('/alien/dashboard');
+                // Centralized JWT session storage (FE-02)
+                setAuthSession('alien', data);
+                const redirectPath = location.state?.from?.pathname || '/alien/dashboard';
+                navigate(redirectPath, { replace: true });
             } else {
                 setSuccessMsg(`Uplink Established! Your Node Identifier is: ${data.alien_id}`);
                 setIsLogin(true);

@@ -1,17 +1,34 @@
 // Authentication page for Boardroom Titans (Register/Login).
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Building2, Lock, ArrowRight, Shield, Building, AlertCircle, Eye, EyeOff, Phone } from 'lucide-react';
 import { API_URL } from '../config';
+import { setAuthSession, isAuthenticated } from '../utils/auth';
 
 const BoardroomLogin = () => {
     const [isLogin, setIsLogin] = useState(true);
-    // ... (lines 8-38 unchanged) 
     const [formData, setFormData] = useState({ company_name: '', email: '', password: '', website_url: '', phone: '' });
     const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
+    const location = useLocation();
+
+    useEffect(() => {
+        // If already authenticated with valid JWT, bounce directly to dashboard
+        if (isAuthenticated('titan')) {
+            const redirectPath = location.state?.from?.pathname || '/boardroom/dashboard';
+            navigate(redirectPath, { replace: true });
+            return;
+        }
+
+        const params = new URLSearchParams(location.search);
+        if (params.get('session_expired')) {
+            setError('Executive session expired. Please authenticate again.');
+        } else if (params.get('timeout')) {
+            setError('Session timed out due to inactivity. Please reconnect.');
+        }
+    }, [navigate, location]);
 
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -61,9 +78,10 @@ const BoardroomLogin = () => {
             }
 
             if (isLogin) {
-                localStorage.setItem('titan_token', 'mock_token');
-                localStorage.setItem('titan_user', JSON.stringify(data));
-                navigate('/boardroom/dashboard');
+                // Centralized JWT session storage (FE-02)
+                setAuthSession('titan', data);
+                const redirectPath = location.state?.from?.pathname || '/boardroom/dashboard';
+                navigate(redirectPath, { replace: true });
             } else {
                 setIsLogin(true);
                 setFormData({ company_name: '', email: '', password: '', website_url: '', phone: '' });

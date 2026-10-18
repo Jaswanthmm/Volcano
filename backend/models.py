@@ -12,7 +12,10 @@ class User(db.Model):
     phone = db.Column(db.String(30), nullable=True) # Contact Phone Number
     password_hash = db.Column(db.String(255))
     is_verified = db.Column(db.Boolean, default=False)
-    # ideas = db.relationship('Idea', backref='author', lazy=True)
+    
+    __table_args__ = (
+        db.Index('idx_user_username_email', 'username', 'email'),
+    )
 
 class Company(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -23,7 +26,10 @@ class Company(db.Model):
     is_verified = db.Column(db.Boolean, default=False)
     logo_url = db.Column(db.String(500)) # URL to company logo
     website_url = db.Column(db.String(200), unique=True) # Official company website
-    # ideas_received = db.relationship('Idea', backref='target_company', lazy=True)
+
+    __table_args__ = (
+        db.Index('idx_company_name_email', 'company_name', 'email'),
+    )
 
 class Idea(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -40,10 +46,31 @@ class Idea(db.Model):
     recipient_company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
     ai_analysis_log = db.Column(db.Text) # Full reasoning from Volcano
 
+    __table_args__ = (
+        db.Index('idx_idea_recipient_status', 'recipient_company_id', 'status'),
+        db.Index('idx_idea_sender_created', 'sender_id', 'created_at'),
+    )
+
 class Message(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     idea_id = db.Column(db.Integer, db.ForeignKey('idea.id'), nullable=False)
     sender_type = db.Column(db.String(10), nullable=False) # 'titan' or 'alien'
     content = db.Column(db.Text, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    __table_args__ = (
+        db.Index('idx_message_idea_created', 'idea_id', 'created_at'),
+    )
+
+class PipelineLog(db.Model):
+    __tablename__ = 'pipeline_log'
+    id = db.Column(db.Integer, primary_key=True)
+    idea_id = db.Column(db.Integer, db.ForeignKey('idea.id'), unique=True, nullable=False)
+    current_agent = db.Column(db.String(100), default="Read & Validate")
+    logs = db.Column(db.Text, default="[]") # JSON list of log entries
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    __table_args__ = (
+        db.Index('idx_pipeline_log_idea_id', 'idea_id'),
+    )
 

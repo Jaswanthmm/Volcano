@@ -1,10 +1,18 @@
 # Authentication routes for Alien and Boardroom registration and login.
-from flask import Blueprint, request, jsonify
-from werkzeug.security import generate_password_hash, check_password_hash
-from models import db, User, Company
+import os
 import random
 import string
 from urllib.parse import urlparse
+from flask import Blueprint, request, jsonify
+from werkzeug.security import generate_password_hash, check_password_hash
+from flask_jwt_extended import (
+    create_access_token,
+    create_refresh_token,
+    jwt_required,
+    get_jwt_identity,
+    get_jwt
+)
+from models import db, User, Company
 
 auth_bp = Blueprint('auth', __name__, url_prefix='/api/auth')
 
@@ -18,7 +26,7 @@ def generate_alien_id():
 
 @auth_bp.route('/alien/register', methods=['POST'], strict_slashes=False)
 def register_alien():
-    data = request.get_json()
+    data = request.get_json() or {}
     email = data.get('email')
     password = data.get('password')
     name = data.get('name') # Optional but requested
@@ -56,7 +64,7 @@ def register_alien():
 
 @auth_bp.route('/alien/login', methods=['POST'])
 def login_alien():
-    data = request.get_json()
+    data = request.get_json() or {}
     identifier = data.get('identifier') # Can be email or Alien ID
     password = data.get('password')
 
@@ -67,8 +75,29 @@ def login_alien():
     alien = User.query.filter((User.email == identifier) | (User.username == identifier)).first()
 
     if alien and check_password_hash(alien.password_hash, password):
+        identity = str(alien.id)
+        claims = {
+            "role": "alien",
+            "alien_id": alien.username,
+            "email": alien.email,
+            "name": alien.name
+        }
+        access_token = create_access_token(identity=identity, additional_claims=claims)
+        refresh_token = create_refresh_token(identity=identity, additional_claims=claims)
+
+        user_info = {
+            "id": alien.id,
+            "alien_id": alien.username,
+            "email": alien.email,
+            "name": alien.name,
+            "role": "alien"
+        }
+
         return jsonify({
             "message": "Login successful",
+            "access_token": access_token,
+            "refresh_token": refresh_token,
+            "user_info": user_info,
             "alien_id": alien.username,
             "email": alien.email,
             "role": "alien"
@@ -80,7 +109,7 @@ def login_alien():
 
 @auth_bp.route('/boardroom/register', methods=['POST'])
 def register_boardroom():
-    data = request.get_json()
+    data = request.get_json() or {}
     company_name = data.get('company_name')
     email = data.get('email')
     password = data.get('password')
@@ -140,7 +169,7 @@ def register_boardroom():
 
 @auth_bp.route('/boardroom/login', methods=['POST'])
 def login_boardroom():
-    data = request.get_json()
+    data = request.get_json() or {}
     email = data.get('email')
     password = data.get('password')
 
@@ -150,8 +179,30 @@ def login_boardroom():
     company = Company.query.filter_by(email=email).first()
 
     if company and check_password_hash(company.password_hash, password):
+        identity = str(company.id)
+        claims = {
+            "role": "titan",
+            "company_id": company.id,
+            "company_name": company.company_name,
+            "email": company.email
+        }
+        access_token = create_access_token(identity=identity, additional_claims=claims)
+        refresh_token = create_refresh_token(identity=identity, additional_claims=claims)
+
+        user_info = {
+            "id": company.id,
+            "company_name": company.company_name,
+            "email": company.email,
+            "logo_url": company.logo_url,
+            "website_url": company.website_url,
+            "role": "titan"
+        }
+
         return jsonify({
             "message": "Boardroom access granted",
+            "access_token": access_token,
+            "refresh_token": refresh_token,
+            "user_info": user_info,
             "company_name": company.company_name,
             "id": company.id,
             "email": company.email,
@@ -161,3 +212,94 @@ def login_boardroom():
         }), 200
     
     return jsonify({"error": "Invalid credentials"}), 401
+
+# --- Admin Routes (SEC-03) ---
+
+@auth_bp.route('/admin/login', methods=['POST'])
+def login_admin():
+    data = request.get_json() or {}
+    password = data.get('password') or data.get('access_code')
+
+    if not password:
+        return jsonify({"error": "Admin access key required"}), 400
+
+    admin_key = os.getenv('VOLCANO_ADMIN_KEY', 'volcano_admin')
+    if password != admin_key:
+        return jsonify({"error": "ACCESS DENIED. INVALID CRYPTO KEY."}), 401
+
+    identity = "admin"
+    claims = {
+        "role": "admin",
+        "username": "admin"
+    }
+    access_token = create_access_token(identity=identity, additional_claims=claims)
+    refresh_token = create_refresh_token(identity=identity, additional_claims=claims)
+
+    user_info = {
+        "role": "admin",
+        "username": "admin"
+    }
+
+    return jsonify({
+        "message": "Admin authorization granted",
+        "access_token": access_token,
+        "refresh_token": refresh_token,
+        "user_info": user_info
+    }), 200
+
+# --- Token Refresh & Current User ---
+
+@auth_bp.route('/refresh', methods=['POST'])
+@jwt_required(refresh=True)
+def refresh_token():
+    identity = get_jwt_identity()
+    claims = get_jwt()
+    # Retain role and custom claims
+    additional_claims = {
+        k: v for k, v in claims.items()
+        if k not in ['fresh', 'iat', 'jti', 'type', 'sub', 'nbf', 'exp']
+    }
+    new_access_token = create_access_token(identity=identity, additional_claims=additional_claims)
+    return jsonify({
+        "access_token": new_access_token,
+        "token_type": "Bearer"
+    }), 200
+
+@auth_bp.route('/me', methods=['GET'])
+@jwt_required()
+def get_current_user_profile():
+    identity = get_jwt_identity()
+    claims = get_jwt()
+    role = claims.get('role')
+
+    if role == 'alien':
+        user = User.query.get(int(identity))
+        if not user:
+            return jsonify({"error": "User not found"}), 404
+        return jsonify({
+            "id": user.id,
+            "alien_id": user.username,
+            "email": user.email,
+            "name": user.name,
+            "role": "alien"
+        }), 200
+    elif role == 'titan':
+        company = Company.query.get(int(identity))
+        if not company:
+            return jsonify({"error": "Company not found"}), 404
+        return jsonify({
+            "id": company.id,
+            "company_name": company.company_name,
+            "email": company.email,
+            "logo_url": company.logo_url,
+            "website_url": company.website_url,
+            "role": "titan"
+        }), 200
+    elif role == 'admin':
+        return jsonify({
+            "role": "admin",
+            "username": "admin"
+        }), 200
+
+    return jsonify({"error": "Invalid role claim"}), 400
+

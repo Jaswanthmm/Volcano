@@ -1,31 +1,45 @@
 # API routes for submitting, retrieving, and managing ideas (signals).
+import os
 from flask import Blueprint, request, jsonify, current_app
+from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
 from models import db, Idea, User, Company, Message
-# from agents import run_pipeline (Moved to worker.py)
 
 ideas_bp = Blueprint('ideas', __name__, url_prefix='/api/ideas')
 
 @ideas_bp.route('/submit', methods=['POST'])
+@jwt_required()
 def submit_idea():
-    data = request.get_json()
-    title = data.get('title')
-    content = data.get('content')
-    sender_identifier = data.get('sender_identifier') # Alien ID or Email
-    company_name = data.get('company_name')
-    signal_type = data.get('signal_type', 'others')
+    identity = get_jwt_identity()
+    claims = get_jwt()
+    role = claims.get('role')
 
-    if not title or not content or not sender_identifier or not company_name:
-        return jsonify({"error": "Missing required fields"}), 400
+    if role != 'alien':
+        return jsonify({"error": "Unauthorized: Only registered Aliens can submit signals"}), 403
 
-    # 1. Find Sender (Alien)
-    sender = User.query.filter((User.username == sender_identifier) | (User.email == sender_identifier)).first()
+    # 1. Strictly bind Sender (Alien) from verified JWT identity
+    sender = db.session.get(User, int(identity))
     if not sender:
         return jsonify({"error": "Alien identity not found"}), 404
 
+    data = request.get_json() or {}
+    title = data.get('title')
+    content = data.get('content')
+    company_name = data.get('company_name')
+    company_id = data.get('recipient_company_id')
+    signal_type = data.get('signal_type', 'others')
+
+    if not title or not content or (not company_name and not company_id):
+        return jsonify({"error": "Missing required fields (title, content, and target company)"}), 400
+
     # 2. Find Recipient (Company)
-    company = Company.query.filter_by(company_name=company_name).first()
+    if company_id:
+        company = db.session.get(Company, int(company_id))
+    else:
+        company = Company.query.filter_by(company_name=company_name).first()
+
     if not company:
         return jsonify({"error": "Target Boardroom not found"}), 404
+
 
     # 3. Create 'Queued' Idea for Worker Process
     new_idea = Idea(
@@ -43,95 +57,13 @@ def submit_idea():
     db.session.add(new_idea)
     db.session.commit()
 
-    # 4. Trigger AI Processing in Background Thread
-    # We use a thread so the user gets an immediate response
-    from threading import Thread
-    import time
-    
-    # Capture real app object to pass to thread
+    # 4. Asynchronous Queue Processing (WORK-01)
+    # The HTTP request completes immediately (<300ms) with 'queued' status.
+    # The pipeline is processed by worker.py, Cloud Tasks webhook, or local async dispatcher.
     app_obj = current_app._get_current_object()
-
-    def background_worker(app, idea_id):
-        # Small delay to ensure main request returns and DB unlocks
-        time.sleep(2)
-        
-        with app.app_context():
-            from agents import run_pipeline
-             # Re-fetch idea and company inside thread
-            idea = Idea.query.get(idea_id)
-            if not idea: return
-            
-            company = Company.query.get(idea.recipient_company_id)
-            if not company: return
-
-            # Fetch Context
-            recent_ideas = Idea.query.filter_by(recipient_company_id=company.id)\
-                .filter(Idea.id != idea.id)\
-                .order_by(Idea.created_at.desc()).limit(20).all()
-            
-            recent_context = [f"Title: {i.title}, Content: {i.content}, Status: {i.status}" for i in recent_ideas]
-
-            # Run Pipeline
-            idea.status = 'processing'
-            db.session.commit()
-            
-            try:
-                analysis = run_pipeline(
-                    idea.title, 
-                    idea.content, 
-                    company.company_name, 
-                    recent_context, 
-                    idea.signal_type, 
-                    idea_id=idea.id
-                )
-                
-                 # Save Results
-                if analysis['valid']:
-                    idea.status = 'sent_to_boardroom'
-                    idea.tags = analysis.get('tags', '')
-                    idea.ai_analysis_log = analysis['log']
-                else:
-                    idea.status = 'volcano_rejected'
-                    idea.ai_analysis_log = analysis['log'] + f"\n\n[FINAL REJECTION REASON]: {analysis['reason']}"
-                    
-                    # Feedback Message
-                    msg = Message(
-                        idea_id=idea.id,
-                        sender_type='volcano', 
-                        content=f"COGNITIVE CORE ALERT: {analysis['reason']}"
-                    )
-                    db.session.add(msg)
-                
-                db.session.commit()
-            except Exception as e:
-                print(f"Background AI Worker Failed: {e}")
-                
-                # Check for Resource Exhausted (429)
-                error_str = str(e)
-                if "429" in error_str or "Resource exhausted" in error_str:
-                    friendly_error = "The Cognitive Core is currently overloaded with signals. Please try again in a few moments."
-                    status_log = "Error: System Capacity Reached (429). Retrying advised."
-                else:
-                    friendly_error = f"System Error: {error_str}"
-                    status_log = f"System Error: {error_str}"
-
-                idea.status = 'volcano_rejected'
-                idea.ai_analysis_log = status_log
-                
-                # Feedback Message
-                msg = Message(
-                    idea_id=idea.id,
-                    sender_type='volcano', 
-                    content=f"COGNITIVE CORE ALERT: {friendly_error}"
-                )
-                db.session.add(msg)
-                
-                db.session.commit()
-
-    # Pass app object, not context
-    thread = Thread(target=background_worker, args=(app_obj, new_idea.id))
-    thread.daemon = True 
-    thread.start()
+    if os.getenv("ASYNC_DISPATCH_LOCAL", "true").lower() == "true":
+        from worker import trigger_async_process
+        trigger_async_process(app_obj, new_idea.id)
 
     return jsonify({
         "message": "Signal queued for Volcano analysis.",
@@ -140,14 +72,43 @@ def submit_idea():
         "signal_type": signal_type
     }), 201
 
-@ideas_bp.route('/my', methods=['GET'])
-def get_my_ideas():
-    identifier = request.args.get('identifier')
+@ideas_bp.route('/<int:idea_id>/process', methods=['POST'])
+def process_queued_signal_webhook(idea_id):
+    """
+    Internal execution endpoint for Cloud Tasks webhooks or worker services (WORK-01).
+    Protected by internal worker secret or Volcano Admin key.
+    """
+    provided_secret = (
+        request.headers.get('X-Internal-Worker-Secret') 
+        or request.headers.get('X-Volcano-Admin-Key')
+        or request.args.get('secret')
+    )
+    expected_secret = os.getenv('INTERNAL_WORKER_SECRET', os.getenv('VOLCANO_ADMIN_KEY', 'volcano_admin'))
     
-    if not identifier:
-        return jsonify({"error": "Alien identifier required"}), 400
+    if not provided_secret or provided_secret != expected_secret:
+        return jsonify({"error": "Unauthorized: Invalid internal worker credentials"}), 403
 
-    user = User.query.filter((User.username == identifier) | (User.email == identifier)).first()
+    from worker import process_signal
+    app_obj = current_app._get_current_object()
+    success = process_signal(app_obj, idea_id)
+    
+    if success:
+        return jsonify({"status": "completed", "signal_id": idea_id}), 200
+    else:
+        return jsonify({"status": "failed", "signal_id": idea_id}), 500
+
+
+@ideas_bp.route('/my', methods=['GET'])
+@jwt_required()
+def get_my_ideas():
+    identity = get_jwt_identity()
+    claims = get_jwt()
+    role = claims.get('role')
+
+    if role != 'alien':
+        return jsonify({"error": "Unauthorized: Only Alien operatives can view their signals"}), 403
+
+    user = db.session.get(User, int(identity))
     if not user:
         return jsonify({"error": "User not found"}), 404
 
@@ -155,7 +116,7 @@ def get_my_ideas():
     
     results = []
     for idea in my_ideas:
-        company = Company.query.get(idea.recipient_company_id)
+        company = db.session.get(Company, idea.recipient_company_id)
         results.append({
             "id": idea.id,
             "title": idea.title,
@@ -183,7 +144,18 @@ def get_companies():
         return jsonify({"error": str(e), "type": str(type(e))}), 500
 
 @ideas_bp.route('/company/<int:company_id>', methods=['GET'])
+@jwt_required()
 def get_company_ideas(company_id):
+    identity = get_jwt_identity()
+    claims = get_jwt()
+    role = claims.get('role')
+
+    # Allow only the company itself or admin
+    if role == 'titan' and int(identity) != company_id:
+        return jsonify({"error": "Forbidden: Cannot access signals for another Boardroom entity"}), 403
+    elif role not in ['titan', 'admin']:
+        return jsonify({"error": "Unauthorized: Boardroom or Admin authorization required"}), 403
+
     # Only fetch signals that have passed Volcano (or are in legacy valid states)
     # We exclude 'processing' and 'volcano_rejected'
     valid_statuses = ['sent_to_boardroom', 'interesting', 'accepted', 'rejected']
@@ -194,7 +166,7 @@ def get_company_ideas(company_id):
     
     results = []
     for idea in ideas:
-        sender = User.query.get(idea.sender_id)
+        sender = db.session.get(User, idea.sender_id)
         # Map 'sent_to_boardroom' to 'pending' for Frontend compatibility
         display_status = 'pending' if idea.status == 'sent_to_boardroom' else idea.status
         
@@ -211,16 +183,28 @@ def get_company_ideas(company_id):
     return jsonify(results), 200
 
 @ideas_bp.route('/<int:idea_id>/status', methods=['POST'])
+@jwt_required()
 def update_idea_status(idea_id):
-    data = request.get_json()
+    identity = get_jwt_identity()
+    claims = get_jwt()
+    role = claims.get('role')
+
+    if role not in ['titan', 'admin']:
+        return jsonify({"error": "Unauthorized: Only Boardroom Titans or Admins can update signal status"}), 403
+
+    data = request.get_json() or {}
     new_status = data.get('status') # accepted, rejected, interesting
 
     if new_status not in ['accepted', 'rejected', 'interesting']:
         return jsonify({"error": "Invalid status"}), 400
 
-    idea = Idea.query.get(idea_id)
+    idea = db.session.get(Idea, idea_id)
     if not idea:
         return jsonify({"error": "Signal not found"}), 404
+
+    # Enforce company ownership: only the intended company (or admin) can change status
+    if role == 'titan' and idea.recipient_company_id != int(identity):
+        return jsonify({"error": "Forbidden: Only the recipient Boardroom entity can modify this signal status"}), 403
 
     idea.status = new_status
     if new_status == 'accepted':

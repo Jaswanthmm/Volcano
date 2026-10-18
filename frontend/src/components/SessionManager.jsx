@@ -1,6 +1,7 @@
 
 import React, { useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { clearAuthSession } from '../utils/auth';
 
 const LOGOUT_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes
 
@@ -19,23 +20,21 @@ const SessionManager = () => {
 
         if (path.startsWith('/alien') || path.startsWith('/login/alien')) {
             // Alien Logout
-            localStorage.removeItem('alien_token');
-            localStorage.removeItem('alien_user');
-            if (!path.startsWith('/login/alien')) { // Don't redirect if already on login
+            clearAuthSession('alien');
+            if (!path.startsWith('/login/alien')) {
                 navigate('/login/alien?timeout=true');
             }
         }
         else if (path.startsWith('/boardroom') || path.startsWith('/login/boardroom') || path.startsWith('/login/titan')) {
-            // Boardroom Logout
-            localStorage.removeItem('boardroom_token');
-            localStorage.removeItem('boardroom_user');
-            if (!path.startsWith('/login/boardroom')) {
+            // Boardroom / Titan Logout
+            clearAuthSession('titan');
+            if (!path.startsWith('/login/boardroom') && !path.startsWith('/login/titan')) {
                 navigate('/login/boardroom?timeout=true');
             }
         }
         else if (path.startsWith('/thinking-engine') || path.startsWith('/volcano')) {
-            // Thinking Engine Logout
-            localStorage.removeItem('thinking_engine_token');
+            // Thinking Engine Admin Logout
+            clearAuthSession('admin');
             if (!path.startsWith('/thinking-engine/login')) {
                 navigate('/thinking-engine/login?timeout=true');
             }

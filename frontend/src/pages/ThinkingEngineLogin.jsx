@@ -1,30 +1,62 @@
 // Restricted login for the Thinking Engine visualization (Admins only).
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { BrainCircuit, Lock, Key, AlertTriangle } from 'lucide-react';
+import { API_URL } from '../config';
+import { setAuthSession, isAuthenticated } from '../utils/auth';
 
 const ThinkingEngineLogin = () => {
     const navigate = useNavigate();
+    const location = useLocation();
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
 
-    const handleLogin = (e) => {
+    useEffect(() => {
+        // If already authenticated with valid admin JWT, bounce directly to thinking engine
+        if (isAuthenticated('admin')) {
+            const redirectPath = location.state?.from?.pathname || '/thinking-engine';
+            navigate(redirectPath, { replace: true });
+            return;
+        }
+
+        const params = new URLSearchParams(location.search);
+        if (params.get('session_expired')) {
+            setError('Admin neural session expired. Please re-authenticate.');
+        } else if (params.get('timeout')) {
+            setError('Neural interface timed out. Please enter credentials.');
+        }
+    }, [navigate, location]);
+
+    const handleLogin = async (e) => {
         e.preventDefault();
         setLoading(true);
         setError('');
 
-        // Simple Admin Authentication Simulation
-        // In production, this verifies against backend. Here, we simulate a strict key.
-        setTimeout(() => {
-            if (password === 'volcano_admin' || password === 'admin') {
-                localStorage.setItem('thinking_engine_token', 'valid_session');
-                navigate('/thinking-engine');
-            } else {
-                setError('ACCESS DENIED. INVALID CRYPTO KEY.');
+        try {
+            const res = await fetch(`${API_URL}/api/auth/admin/login`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({ password })
+            });
+
+            const data = await res.json();
+            if (!res.ok) {
+                throw new Error(data.error || 'ACCESS DENIED. INVALID CRYPTO KEY.');
             }
+
+            // Centralized JWT session storage (FE-02)
+            setAuthSession('admin', data);
+            const redirectPath = location.state?.from?.pathname || '/thinking-engine';
+            navigate(redirectPath, { replace: true });
+        } catch (err) {
+            setError(err.message || 'ACCESS DENIED. INVALID CRYPTO KEY.');
+        } finally {
             setLoading(false);
-        }, 1000);
+        }
     };
 
     return (
