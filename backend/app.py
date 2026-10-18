@@ -88,10 +88,31 @@ def configure_database(target_app, database_url=None):
     if database_url is None:
         database_url = os.getenv('DATABASE_URL')
     
+    # Sanitize and normalize database URL
+    if database_url:
+        database_url = database_url.strip()
+        # Strip surrounding quotes if present
+        if (database_url.startswith('"') and database_url.endswith('"')) or \
+           (database_url.startswith("'") and database_url.endswith("'")):
+            database_url = database_url[1:-1].strip()
+        
+        # Strip accidental 'DATABASE_URL=' prefix if user pasted key=value into Secret Manager
+        if database_url.startswith("DATABASE_URL="):
+            database_url = database_url.split("DATABASE_URL=", 1)[1].strip()
+            if (database_url.startswith('"') and database_url.endswith('"')) or \
+               (database_url.startswith("'") and database_url.endswith("'")):
+                database_url = database_url[1:-1].strip()
+
     if database_url and (database_url.startswith("postgres://") or database_url.startswith("postgresql://")):
         # SQLAlchemy 2.0 requires postgresql:// instead of postgres://
         if database_url.startswith("postgres://"):
             database_url = database_url.replace("postgres://", "postgresql://", 1)
+        
+        # Ensure sslmode=require for Supabase / remote PostgreSQL if not already present
+        if "supabase.com" in database_url and "sslmode=" not in database_url:
+            separator = "&" if "?" in database_url else "?"
+            database_url = f"{database_url}{separator}sslmode=require"
+
         target_app.config['SQLALCHEMY_DATABASE_URI'] = database_url
         
         # Resilient Postgres Connection Pooling to prevent connection exhaustion (DB-03)
@@ -110,10 +131,18 @@ def configure_database(target_app, database_url=None):
 
     target_app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-# Initialize database configuration
-configure_database(app)
+# Initialize database configuration with graceful fallback
+try:
+    configure_database(app)
+    db.init_app(app)
+except Exception as e:
+    import traceback
+    print(f"CRITICAL: Primary database engine creation failed ({e}). Falling back to local SQLite.")
+    traceback.print_exc()
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'ideas.db')
+    app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {"pool_pre_ping": True}
+    db.init_app(app)
 
-db.init_app(app)
 migrate = Migrate(app, db)
 
 app.register_blueprint(ideas_bp)

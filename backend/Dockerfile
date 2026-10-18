@@ -43,7 +43,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy complete virtual environment from builder
-COPY --from=builder /opt/venv /opt/venv
+COPY --chown=${USER}:${USER} --from=builder /opt/venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
 # Copy application source code
@@ -63,4 +63,4 @@ ENV PYTHONDONTWRITEBYTECODE=1
 EXPOSE ${PORT}
 
 # Gunicorn production execution with signal trapping
-CMD exec gunicorn --bind :$PORT --workers 2 --threads 4 --timeout 120 --access-logfile - --error-logfile - app:app
+CMD ["sh", "-c", "exec gunicorn --bind 0.0.0.0:${PORT:-8080} --workers 2 --threads 4 --timeout 120 --access-logfile - --error-logfile - app:app"]
