@@ -65,11 +65,14 @@ class AgentLog:
 
 
 # --- GEMINI EXPONENTIAL BACKOFF & JITTER (WORK-03) ---
-def generate_content_with_retry(client, contents, config, model='gemini-2.0-flash', max_retries=4, initial_backoff=2.0, log=None):
+def generate_content_with_retry(client, contents, config, model=None, max_retries=4, initial_backoff=2.0, log=None):
     """
     Executes Gemini content generation wrapped with exponential backoff and jitter for 429 and 503 errors (WORK-03).
     Surges in traffic gracefully queue and retry rather than failing with unhandled exceptions.
     """
+    if model is None:
+        model = os.getenv('GEMINI_MODEL', 'gemini-3.8-flash')
+
     backoff = initial_backoff
     last_err = None
 

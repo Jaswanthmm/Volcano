@@ -12,6 +12,48 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 load_dotenv()
 
+def sanitize_user_feedback(raw_reason: str) -> str:
+    """
+    Sanitizes pipeline rejection reasons to ensure technical errors, stack traces,
+    HTTP status codes, or third-party API JSON payloads are NEVER leaked to end users.
+    Normal domain evaluation reasons (e.g. duplicates, feasibility, novelty) pass through safely.
+    """
+    if not raw_reason:
+        return "Neural pipeline encountered a temporary processing anomaly. Please retry your submission."
+
+    lower = raw_reason.lower()
+
+    # Check for technical / system / API / network errors
+    is_system_error = (
+        raw_reason.startswith("System Error:") or
+        "traceback" in lower or
+        "exception" in lower or
+        "{'error'" in raw_reason or
+        '{"error"' in raw_reason or
+        "ai output malformed" in lower or
+        "ai system offline" in lower or
+        "configuration error" in lower or
+        "gemini api key missing" in lower or
+        "404 not_found" in lower
+    )
+
+    if not is_system_error:
+        # Safe domain reason from the LLM evaluator (e.g. "Duplicate idea already submitted", etc.)
+        return raw_reason
+
+    # Technical error detected: map to professional, reassuring user guidance
+    if any(term in lower for term in ["429", "resource_exhausted", "quota", "rate limit", "too many requests"]):
+        return "High cognitive demand temporarily throttled this analysis. Please resubmit your signal in a few moments."
+    elif any(term in lower for term in ["404", "not_found", "deprecated", "no longer available", "model"]):
+        return "Cognitive reasoning cluster is currently refreshing its model weights. Please try submitting again shortly."
+    elif any(term in lower for term in ["timeout", "503", "unavailable", "deadline exceeded"]):
+        return "External knowledge verification timed out. Please try again shortly."
+    elif any(term in lower for term in ["api key", "configuration", "offline"]):
+        return "Cognitive reasoning services are temporarily undergoing maintenance. Please try again shortly."
+    else:
+        return "Neural pipeline encountered a temporary processing anomaly. Please retry your submission."
+
+
 def process_signal(app, idea_id):
     """
     Processes a single signal (Idea) through the Volcano Thinking Engine pipeline.
@@ -72,13 +114,15 @@ def process_signal(app, idea_id):
             else:
                 print(f"[Worker] REJECTED Signal #{idea.id} -> volcano_rejected")
                 idea.status = 'volcano_rejected'
+                # Full technical log and reason preserved for internal admin inspection
                 idea.ai_analysis_log = analysis['log'] + f"\n\n[FINAL REJECTION REASON]: {analysis['reason']}"
                 
-                # Feedback Message for alien operative
+                # Feedback Message for alien operative (sanitized for user security & experience)
+                user_feedback = sanitize_user_feedback(analysis.get('reason', ''))
                 msg = Message(
                     idea_id=idea.id,
                     sender_type='volcano', 
-                    content=f"COGNITIVE CORE ALERT: {analysis['reason']}"
+                    content=f"COGNITIVE CORE STATUS: {user_feedback}"
                 )
                 db.session.add(msg)
             
@@ -87,24 +131,25 @@ def process_signal(app, idea_id):
             return True
 
         except Exception as e:
+            import traceback
             print(f"[Worker] CRITICAL FAILURE on Signal #{idea_id}: {e}")
+            traceback.print_exc()
             try:
                 from models import db, Idea, Message
                 idea = db.session.get(Idea, idea_id)
                 if idea:
                     error_str = str(e)
-                    if "429" in error_str or "resource_exhausted" in error_str.lower():
-                        friendly_error = "Cognitive Core capacity reached (429). Retrying advised."
-                    else:
-                        friendly_error = f"System Error: {error_str}"
-
+                    # Technical detail preserved for internal audit & Thinking Engine admin logs
+                    idea.ai_analysis_log = f"SYSTEM EXCEPTION: {error_str}\n\nTRACEBACK:\n{traceback.format_exc()}"
                     idea.status = 'volcano_rejected'
-                    idea.ai_analysis_log = f"SYSTEM ERROR: {friendly_error}"
+
+                    # Clean, sanitized user-facing feedback without raw stack traces or internal API dicts
+                    user_friendly_note = sanitize_user_feedback(error_str)
 
                     msg = Message(
                         idea_id=idea.id,
                         sender_type='volcano',
-                        content=f"COGNITIVE CORE ALERT: {friendly_error}"
+                        content=f"COGNITIVE CORE STATUS: {user_friendly_note}"
                     )
                     db.session.add(msg)
                     db.session.commit()
