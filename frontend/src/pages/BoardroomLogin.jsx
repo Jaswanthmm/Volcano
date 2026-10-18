@@ -95,7 +95,7 @@ const BoardroomLogin = () => {
     };
 
     return (
-        <div className="min-h-screen bg-black text-white font-space relative overflow-hidden flex items-center justify-center selection:bg-blue-500 selection:text-white">
+        <div className="min-h-screen bg-black text-white font-space relative overflow-hidden flex items-center justify-center selection:bg-blue-500 selection:text-white titan-theme">
 
             {/* Background Ambience */}
             <div className="absolute inset-0 pointer-events-none">

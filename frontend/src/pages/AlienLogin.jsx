@@ -89,7 +89,7 @@ const AlienLogin = () => {
     };
 
     return (
-        <div className="min-h-screen bg-black text-green-500 font-mono relative overflow-hidden selection:bg-green-900 selection:text-white flex items-center justify-center">
+        <div className="min-h-screen bg-black text-green-500 font-mono relative overflow-hidden selection:bg-green-900 selection:text-white flex items-center justify-center alien-theme">
 
             {/* Background Ambience */}
             <div className="absolute inset-0 pointer-events-none">
@@ -185,7 +185,7 @@ const AlienLogin = () => {
                                         onChange={handleChange}
                                         className="w-full bg-black/50 border border-green-500/30 rounded-lg px-4 py-3 text-green-400 focus:outline-none focus:border-green-400 transition-colors placeholder-green-900/50 text-sm"
                                         placeholder="+1 (555) 019-2834"
-                                        autoComplete="tel"
+                                        autoComplete="off"
                                     />
                                     <div className="absolute right-3 top-3 text-green-500/20 group-focus-within:text-green-500/50 transition-colors">
                                         <Phone size={18} />
