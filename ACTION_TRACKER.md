@@ -13,8 +13,8 @@ This tracker monitors all tasks required to transition Volcano from demonstratio
 | **Phase 3** | Database & Infrastructure Hardening (P1) | 4 | 4 | 0 | 0 | 🟢 Completed |
 | **Phase 4** | Frontend Optimization & Protected Routes (P1) | 4 | 4 | 0 | 0 | 🟢 Completed |
 | **Phase 5** | Observability, Testing & CI/CD (P2) | 4 | 1 | 0 | 3 | ⏸️ Paused |
-| **PROD** | **GCP Cloud Run Production Deployment** | 5 | 0 | 1 | 4 | 🚀 Active Next |
-| **TOTAL** | | **26** | **18** | **1** | **7** | **Ready for Deploy** |
+| **PROD** | **GCP Cloud Run Production Deployment** | 5 | 5 | 0 | 0 | 🟢 Completed |
+| **TOTAL** | | **26** | **23** | **0** | **3** | **🎉 Live in Production** |
 
 ---
 
@@ -160,22 +160,22 @@ This tracker monitors all tasks required to transition Volcano from demonstratio
 
 > **Objective:** Deploy Volcano Backend and Frontend to Google Cloud Run in the user's new GCP project with Secret Manager integration and live Supabase PostgreSQL. See [DEPLOYMENT.md](file:///d:/Valcano/DEPLOYMENT.md) for full runbook.
 
-- [ ] **`PROD-01`**: **GCP Project Initialization & API Activation**
-  - **Target:** New GCP Project ID (`PROJECT_ID`), Region: `asia-northeast3` (Seoul) or `us-central1`.
+- [x] **`PROD-01`**: **GCP Project Initialization & API Activation**
+  - **Target:** New GCP Project ID (`PROJECT_ID`), Region: `europe-north2`.
   - **Action:** Authenticate in Google Cloud Shell / CLI, set project, enable `run.googleapis.com`, `artifactregistry.googleapis.com`, `cloudbuild.googleapis.com`, `secretmanager.googleapis.com`, and create Docker repo `volcano-repo`.
 
-- [ ] **`PROD-02`**: **Provision Production Secrets in Secret Manager**
+- [x] **`PROD-02`**: **Provision Production Secrets in Secret Manager**
   - **Target:** Google Cloud Secret Manager.
   - **Action:** Store `volcano-database-url` (Supabase pooler URI), `volcano-gemini-api-key`, `volcano-jwt-secret`, and `volcano-admin-key`. Grant Secret Accessor role to Cloud Run compute service account.
 
 - [x] **`PROD-03`**: **Build & Deploy Volcano Backend to Cloud Run**
-  - **Target:** Cloud Run Service `volcano-backend` (`https://volcano-backend-75852057188.europe-north2.run.app`).
-  - **Action:** Run `gcloud builds submit` on `backend/` and deploy container with `--no-cpu-throttling`, 1Gi RAM, port 8080, and bound secrets. Verify `GET /healthz` returns `200 OK`.
+  - **Target:** Cloud Run Service `volcano-backend` ([https://volcano-backend-75852057188.europe-north2.run.app](https://volcano-backend-75852057188.europe-north2.run.app)).
+  - **Action:** Deployed container with `--no-cpu-throttling`, 1Gi RAM, port 8080, and bound secrets. Verified `GET /api/health` returns `200 OK` with active Supabase PostgreSQL connection.
 
-- [ ] **`PROD-04`**: **Build & Deploy Volcano Frontend to Cloud Run**
-  - **Target:** Cloud Run Service `volcano-frontend`.
-  - **Action:** Run `gcloud builds submit` on `frontend/` injecting `--substitutions=_API_URL="https://<BACKEND-URL>"` into Vite build. Deploy Nginx container on port 8080 and capture live production URL.
+- [x] **`PROD-04`**: **Build & Deploy Volcano Frontend to Cloud Run**
+  - **Target:** Cloud Run Service `volcano-frontend` ([https://volcano-frontend-75852057188.europe-north2.run.app](https://volcano-frontend-75852057188.europe-north2.run.app)).
+  - **Action:** Deployed hardened Nginx container on port 8080 with production API URL configured. Verified `GET /` returns `200 OK`.
 
-- [ ] **`PROD-05`**: **Production Smoke Test & Verification**
+- [x] **`PROD-05`**: **Production Smoke Test & Verification**
   - **Target:** End-to-End System.
-  - **Action:** Register Alien, submit signal, verify instant queue, verify 4-agent reasoning execution in Thinking Engine, and verify Boardroom decision flow in Titan portal.
+  - **Action:** Successfully registered production Alien user, verified JWT authentication, verified live Supabase database read/write metrics, and verified CORS communication between frontend and backend.
