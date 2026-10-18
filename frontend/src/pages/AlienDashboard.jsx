@@ -21,6 +21,7 @@ const AlienDashboard = () => {
     const [submitStatus, setSubmitStatus] = useState(null); // 'sending', 'success', 'error'
     const [errorMessage, setErrorMessage] = useState('');
     const [currentView, setCurrentView] = useState('transmit'); // 'transmit' | 'archive'
+    const [isLoggingOut, setIsLoggingOut] = useState(false);
 
     // Chat State
     const [showChatModal, setShowChatModal] = useState(false);
@@ -199,8 +200,16 @@ const AlienDashboard = () => {
     }, [showChatModal, selectedSignalForChat]);
 
     const handleLogout = () => {
+        setIsLoggingOut(true);
         clearAuthSession('alien');
-        navigate('/');
+        setTimeout(() => {
+            navigate('/', { 
+                state: { 
+                    logoutMessage: 'Alien Node uplink safely disconnected. Local session telemetry purged.', 
+                    logoutRole: 'alien' 
+                } 
+            });
+        }, 500);
     };
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -280,6 +289,17 @@ const AlienDashboard = () => {
 
     return (
         <div className="min-h-screen bg-black text-green-500 font-mono relative selection:bg-green-900 selection:text-white">
+
+            {/* Logout Disconnecting Overlay */}
+            {isLoggingOut && (
+                <div className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-md flex flex-col items-center justify-center font-mono">
+                    <div className="p-8 rounded-2xl border border-green-500/30 bg-green-950/20 max-w-sm w-full text-center flex flex-col items-center shadow-[0_0_50px_rgba(34,197,94,0.15)]">
+                        <div className="w-10 h-10 rounded-full border-2 border-green-500/20 border-t-green-500 animate-spin mb-4" />
+                        <h3 className="text-white text-sm font-bold tracking-widest uppercase mb-1">TERMINATING UPLINK</h3>
+                        <p className="text-green-500/60 text-xs">Purging credentials & disconnecting node...</p>
+                    </div>
+                </div>
+            )}
 
             {/* Background Details */}
             <div className="fixed inset-0 pointer-events-none opacity-20">
@@ -437,14 +457,17 @@ const AlienDashboard = () => {
                                 </div>
 
                                 <div>
-                                    <label className="block text-[10px] uppercase tracking-widest text-green-500/60 mb-2">Signal Core</label>
+                                    <div className="flex justify-between items-center mb-2">
+                                        <label className="block text-[10px] uppercase tracking-widest text-green-500/60">Signal Core</label>
+                                        <span className="text-[10px] text-green-500/40 font-mono">{title.length}/120</span>
+                                    </div>
                                     <input
                                         type="text"
                                         value={title}
                                         onChange={(e) => setTitle(e.target.value)}
                                         className="w-full bg-black border border-green-500/20 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-green-500 transition-colors uppercase tracking-wider placeholder-green-800"
                                         placeholder="Operation Name..."
-                                        maxLength={15}
+                                        maxLength={120}
                                     />
                                 </div>
 
@@ -509,11 +532,11 @@ const AlienDashboard = () => {
                                     visibleIdeas.map(idea => (
                                         <div key={idea.id} className={`p-4 bg-green-900/5 border rounded-lg transition-all group ${idea.status === 'volcano_rejected' ? 'border-red-500/30 hover:border-red-500/50' : 'border-green-500/10 hover:border-green-500/30'}`}>
                                             <div className="flex justify-between items-start mb-2">
-                                                <div className="flex items-center gap-2">
-                                                    <span className="text-[10px] bg-green-900/40 text-green-300 px-2 py-0.5 rounded border border-green-500/20">{idea.signal_type || 'Signal'}</span>
-                                                    <h4 className="font-bold text-green-400 text-sm group-hover:text-green-300">{idea.title}</h4>
+                                                <div className="flex items-center gap-2 min-w-0 flex-1 mr-2">
+                                                    <span className="text-[10px] bg-green-900/40 text-green-300 px-2 py-0.5 rounded border border-green-500/20 shrink-0">{idea.signal_type || 'Signal'}</span>
+                                                    <h4 className="font-bold text-green-400 text-sm group-hover:text-green-300 truncate">{idea.title}</h4>
                                                 </div>
-                                                <span className={`text-[10px] uppercase tracking-wider px-2 py-0.5 rounded border flex items-center gap-1 ${idea.status === 'processing' ? 'border-yellow-500/20 text-yellow-500 animate-pulse' :
+                                                <span className={`text-[10px] uppercase tracking-wider px-2 py-0.5 rounded border flex items-center gap-1 shrink-0 ${idea.status === 'processing' ? 'border-yellow-500/20 text-yellow-500 animate-pulse' :
                                                     idea.status === 'sent_to_boardroom' ? 'border-green-500/20 text-green-400' :
                                                         idea.status === 'volcano_rejected' ? 'border-red-500/20 text-red-500' :
                                                             'border-gray-500/20 text-gray-500'
@@ -581,7 +604,7 @@ const AlienDashboard = () => {
                             {/* Left: Context Summary */}
                             <div className="w-1/3 bg-green-900/10 border-r border-green-500/20 p-8 flex flex-col">
                                 <h3 className="text-xs font-bold text-green-600 uppercase tracking-widest mb-4">Transmission Context</h3>
-                                <h2 className="text-xl font-bold text-green-400 mb-2 leading-tight">{selectedSignalForChat.title}</h2>
+                                <h2 className="text-xl font-bold text-green-400 mb-2 leading-tight break-words">{selectedSignalForChat.title}</h2>
                                 <div className="flex items-center gap-2 text-green-500/50 text-[10px] uppercase tracking-widest mb-6">
                                     <Shield size={12} /> {(selectedSignalForChat.status === 'volcano_rejected' || selectedSignalForChat.status === 'rejected') ? 'SIGNAL REJECTED' : `TO: ${selectedSignalForChat.company_name}`}
                                 </div>

@@ -242,6 +242,8 @@ const AlienLogin = () => {
                                     type="checkbox"
                                     id="terms"
                                     required
+                                    onInvalid={e => e.target.setCustomValidity('Please accept to proceed!')}
+                                    onInput={e => e.target.setCustomValidity('')}
                                     className="w-3 h-3 bg-black/50 border border-green-500/30 rounded focus:ring-1 focus:ring-green-500 text-green-500 cursor-pointer"
                                 />
                                 <label htmlFor="terms" className="text-[9px] text-green-500/60 uppercase tracking-wide cursor-pointer select-none">

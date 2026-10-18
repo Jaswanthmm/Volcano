@@ -31,6 +31,8 @@ def submit_idea():
     if not title or not content or (not company_name and not company_id):
         return jsonify({"error": "Missing required fields (title, content, and target company)"}), 400
 
+    title = str(title).strip()[:200]
+
     # 2. Find Recipient (Company)
     if company_id:
         company = db.session.get(Company, int(company_id))

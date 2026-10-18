@@ -13,6 +13,8 @@ import ThinkingEngineLogin from './pages/ThinkingEngineLogin';
 import AlienProfile from './pages/AlienProfile';
 import BoardroomProfile from './pages/BoardroomProfile';
 import Terms from './pages/Terms';
+import PrivacyPolicy from './pages/PrivacyPolicy';
+import Disclosures from './pages/Disclosures';
 import ErrorBoundary from './components/ErrorBoundary';
 import SessionManager from './components/SessionManager';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -70,6 +72,8 @@ function App() {
             } 
           />
           <Route path="/terms" element={<Terms />} />
+          <Route path="/privacy" element={<PrivacyPolicy />} />
+          <Route path="/disclosures" element={<Disclosures />} />
         </Routes>
       </ErrorBoundary>
     </Router>

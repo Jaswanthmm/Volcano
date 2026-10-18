@@ -1,14 +1,73 @@
 
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import {
   Lightbulb, CheckCircle2, Building2, DollarSign,
   ArrowRight, Shield, Zap, TrendingUp, Users, Lock,
-  Activity, Code
+  Activity, Code, X, ShieldCheck, Radio
 } from 'lucide-react';
 
 const LandingPage = () => {
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+  const location = useLocation();
+  const [logoutNotification, setLogoutNotification] = useState(null);
+  const [progress, setProgress] = useState(100);
+
+  // --- LOGOUT NOTIFICATION DETECTOR ---
+  useEffect(() => {
+    const stateMessage = location.state?.logoutMessage;
+    const stateRole = location.state?.logoutRole;
+
+    const searchParams = new URLSearchParams(location.search);
+    const queryLogout = searchParams.get('logout');
+
+    let notification = null;
+    if (stateMessage) {
+      notification = {
+        title: stateRole === 'alien' ? 'Uplink Terminated' : 'Session Closed',
+        message: stateMessage,
+        role: stateRole || 'system'
+      };
+    } else if (queryLogout === 'alien') {
+      notification = {
+        title: 'Uplink Terminated',
+        message: 'Alien Node uplink safely disconnected. Local session telemetry purged.',
+        role: 'alien'
+      };
+    } else if (queryLogout === 'boardroom' || queryLogout === 'titan') {
+      notification = {
+        title: 'Session Closed',
+        message: 'Boardroom session encrypted and closed. You have been logged out.',
+        role: 'boardroom'
+      };
+    }
+
+    if (notification) {
+      setLogoutNotification(notification);
+      setProgress(100);
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, [location]);
+
+  // Auto-dismiss countdown timer
+  useEffect(() => {
+    if (!logoutNotification) return;
+
+    const startTime = Date.now();
+    const duration = 5000;
+
+    const interval = setInterval(() => {
+      const elapsed = Date.now() - startTime;
+      const remaining = Math.max(0, 100 - (elapsed / duration) * 100);
+      setProgress(remaining);
+      if (elapsed >= duration) {
+        setLogoutNotification(null);
+        clearInterval(interval);
+      }
+    }, 50);
+
+    return () => clearInterval(interval);
+  }, [logoutNotification]);
 
   useEffect(() => {
     const handleMouseMove = (e) => {
@@ -195,6 +254,52 @@ const LandingPage = () => {
         </div>
       </nav>
 
+      {/* --- LOGOUT NOTIFICATION TOAST --- */}
+      {logoutNotification && (
+        <div className="fixed top-24 left-1/2 -translate-x-1/2 z-50 max-w-lg w-[92%] transition-all">
+          <div className={`relative overflow-hidden rounded-xl p-4 border backdrop-blur-xl shadow-2xl ${
+            logoutNotification.role === 'alien'
+              ? 'bg-black/95 border-green-500/40 text-green-300 shadow-[0_10px_40px_rgba(34,197,94,0.25)]'
+              : 'bg-[#050b14]/95 border-blue-500/40 text-blue-300 shadow-[0_10px_40px_rgba(59,130,246,0.25)]'
+          }`}>
+            <div className="flex items-start gap-3">
+              <div className={`p-2 rounded-lg shrink-0 mt-0.5 ${
+                logoutNotification.role === 'alien' ? 'bg-green-500/20 text-green-400' : 'bg-blue-500/20 text-blue-400'
+              }`}>
+                {logoutNotification.role === 'alien' ? <Radio size={18} /> : <ShieldCheck size={18} />}
+              </div>
+              <div className="flex-1 min-w-0 pr-2">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className={`inline-block w-2 h-2 rounded-full ${
+                    logoutNotification.role === 'alien' ? 'bg-green-500 animate-pulse' : 'bg-blue-500 animate-pulse'
+                  }`} />
+                  <h4 className="text-xs font-bold uppercase tracking-widest font-mono text-white">
+                    {logoutNotification.title}
+                  </h4>
+                </div>
+                <p className="text-xs text-gray-300 leading-relaxed font-sans">
+                  {logoutNotification.message}
+                </p>
+              </div>
+              <button
+                onClick={() => setLogoutNotification(null)}
+                className="text-gray-400 hover:text-white p-1 rounded transition-colors shrink-0"
+                aria-label="Dismiss notification"
+              >
+                <X size={16} />
+              </button>
+            </div>
+            {/* Auto-dismiss progress countdown line */}
+            <div
+              className={`absolute bottom-0 left-0 h-0.5 transition-all ease-linear ${
+                logoutNotification.role === 'alien' ? 'bg-green-500' : 'bg-blue-500'
+              }`}
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+        </div>
+      )}
+
       {/* --- HERO --- */}
       <section className="relative z-10 pt-28 md:pt-40 pb-20 px-6 max-w-7xl mx-auto text-center">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded border border-red-500/30 bg-red-500/10 text-red-500 text-[10px] font-bold uppercase tracking-widest mb-8">
@@ -211,7 +316,7 @@ const LandingPage = () => {
         </h1>
 
         <p className="text-xl text-gray-400 max-w-2xl mx-auto mb-12 font-light">
-          The marketplace for outlier intelligence. <br className="hidden md:block" />
+          The place for outlier intelligence. <br className="hidden md:block" />
         </p>
 
         <div className="flex flex-col sm:flex-row justify-center gap-4">
@@ -242,7 +347,7 @@ const LandingPage = () => {
                 <Lightbulb size={32} />
               </div>
               <h4 className="text-lg font-bold mb-2">1. Valid Signal</h4>
-              <p className="text-sm text-gray-500">You submit a raw observation, idea, or solution anonymously.</p>
+              <p className="text-sm text-gray-500">You submit a raw observation, idea, or solution.</p>
             </div>
 
             {/* Step 2 */}
@@ -251,7 +356,7 @@ const LandingPage = () => {
                 <Shield size={32} />
               </div>
               <h4 className="text-lg font-bold mb-2">2. Volcano Vetting</h4>
-              <p className="text-sm text-gray-500">Our Thinking Engine filters noise and verifies value potential.</p>
+              <p className="text-sm text-gray-500">Our Thinking Engine filters noise and verifies value potential in your signal.</p>
             </div>
 
             {/* Step 3 */}
@@ -259,8 +364,8 @@ const LandingPage = () => {
               <div className="w-16 h-16 mx-auto bg-gray-900 rounded-full border border-white/10 flex items-center justify-center mb-6 text-white group-hover:text-red-400 group-hover:scale-110 transition-all">
                 <Building2 size={32} />
               </div>
-              <h4 className="text-lg font-bold mb-2">3. Corporate Match</h4>
-              <p className="text-sm text-gray-500">We route your insight to the specific Boardroom that needs it.</p>
+              <h4 className="text-lg font-bold mb-2">3. Boardroom Sync</h4>
+              <p className="text-sm text-gray-500">Let the Corporate analyze, iterate and include into their enterprise. </p>
             </div>
 
             {/* Step 4 */}
@@ -268,8 +373,8 @@ const LandingPage = () => {
               <div className="w-16 h-16 mx-auto bg-gray-900 rounded-full border border-white/10 flex items-center justify-center mb-6 text-white group-hover:text-red-400 group-hover:scale-110 transition-all">
                 <DollarSign size={32} />
               </div>
-              <h4 className="text-lg font-bold mb-2">4. Instant Payout</h4>
-              <p className="text-sm text-gray-500">The company pays for the solution. You get paid immediately.</p>
+              <h4 className="text-lg font-bold mb-2">4. Real Value</h4>
+              <p className="text-sm text-gray-500">The company valuate the solution. Your value grows.</p>
             </div>
           </div>
         </div>
@@ -296,7 +401,7 @@ const LandingPage = () => {
               </li>
               <li className="flex items-center gap-3">
                 <CheckCircle2 size={16} className="text-green-500" />
-                <span>Market-rate compensation.</span>
+                <span>Create your Value</span>
               </li>
             </ul>
             <Link to="/login/alien" className="group inline-flex w-full items-center justify-center gap-2 py-4 text-center bg-transparent border border-white/10 text-white font-bold uppercase tracking-widest text-xs rounded hover:border-green-500 hover:text-green-500 transition-all">
@@ -313,7 +418,7 @@ const LandingPage = () => {
             <ul className="space-y-4 mb-8 text-gray-400">
               <li className="flex items-center gap-3">
                 <CheckCircle2 size={16} className="text-blue-500" />
-                <span>Access filtered, high-alpha Intel.</span>
+                <span>Access filtered, No Noise.</span>
               </li>
               <li className="flex items-center gap-3">
                 <CheckCircle2 size={16} className="text-blue-500" />
@@ -321,7 +426,7 @@ const LandingPage = () => {
               </li>
               <li className="flex items-center gap-3">
                 <CheckCircle2 size={16} className="text-blue-500" />
-                <span>Pay only for actionable solutions.</span>
+                <span>Build real value for your company.</span>
               </li>
             </ul>
             <Link to="/login/boardroom" className="group inline-flex w-full items-center justify-center gap-2 py-4 text-center bg-transparent border border-white/10 text-white font-bold uppercase tracking-widest text-xs rounded hover:border-blue-500 hover:text-blue-500 transition-all">
@@ -346,7 +451,7 @@ const LandingPage = () => {
               <span className="text-xl font-bold tracking-tighter text-white">VOLCANO</span>
             </div>
             <p className="text-gray-500 max-w-sm">
-              The decentralized marketplace for high-value corporate intelligence.
+              The decentralized place for high-value intelligence.
               Connecting outlier minds with boardroom problems.
             </p>
           </div>
@@ -365,9 +470,9 @@ const LandingPage = () => {
           <div>
             <h4 className="font-bold text-white mb-4 uppercase tracking-wider">Legal</h4>
             <ul className="space-y-2 text-gray-500">
-              <li><a href="#" className="hover:text-red-500 transition-colors">Privacy Policy</a></li>
+              <li><Link to="/privacy" className="hover:text-red-500 transition-colors">Privacy Policy</Link></li>
               <li><Link to="/terms" className="hover:text-red-500 transition-colors">Terms of Service</Link></li>
-              <li><a href="#" className="hover:text-red-500 transition-colors">Disclosures</a></li>
+              <li><Link to="/disclosures" className="hover:text-red-500 transition-colors">Disclosures</Link></li>
             </ul>
           </div>
         </div>

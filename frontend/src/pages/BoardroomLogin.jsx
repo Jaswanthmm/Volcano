@@ -242,6 +242,8 @@ const BoardroomLogin = () => {
                                         type="checkbox"
                                         id="corporate-representation"
                                         required
+                                        onInvalid={e => e.target.setCustomValidity('Please accept to proceed!')}
+                                        onInput={e => e.target.setCustomValidity('')}
                                         className="w-3.5 h-3.5 mt-0.5 bg-black/20 border border-blue-200/30 rounded focus:ring-1 focus:ring-blue-500 text-blue-500 cursor-pointer shrink-0"
                                     />
                                     <label htmlFor="corporate-representation" className="text-[10px] text-blue-200/70 tracking-wide cursor-pointer select-none leading-relaxed">
@@ -254,6 +256,8 @@ const BoardroomLogin = () => {
                                         type="checkbox"
                                         id="terms"
                                         required
+                                        onInvalid={e => e.target.setCustomValidity('Please accept to proceed!')}
+                                        onInput={e => e.target.setCustomValidity('')}
                                         className="w-3.5 h-3.5 bg-black/20 border border-blue-200/30 rounded focus:ring-1 focus:ring-blue-500 text-blue-500 cursor-pointer shrink-0"
                                     />
                                     <label htmlFor="terms" className="text-[10px] text-blue-200/60 uppercase tracking-wide cursor-pointer select-none">

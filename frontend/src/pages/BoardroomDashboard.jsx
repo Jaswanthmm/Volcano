@@ -14,6 +14,7 @@ const BoardroomDashboard = () => {
     const [activeTab, setActiveTab] = useState('feed'); // 'feed' | 'scout'
     const [showProfileModal, setShowProfileModal] = useState(false);
     const [showChatModal, setShowChatModal] = useState(false);
+    const [isLoggingOut, setIsLoggingOut] = useState(false);
 
     // Data State
     const [signals, setSignals] = useState([]);
@@ -190,8 +191,16 @@ const BoardroomDashboard = () => {
     };
 
     const handleLogout = () => {
+        setIsLoggingOut(true);
         clearAuthSession('titan');
-        navigate('/');
+        setTimeout(() => {
+            navigate('/', { 
+                state: { 
+                    logoutMessage: 'Boardroom session encrypted and closed. You have been logged out.', 
+                    logoutRole: 'boardroom' 
+                } 
+            });
+        }, 500);
     };
 
     if (loading) return (
@@ -205,6 +214,17 @@ const BoardroomDashboard = () => {
 
     return (
         <div className="min-h-screen bg-[#050b14] text-white font-sans selection:bg-blue-500 selection:text-white overflow-hidden flex flex-col relative">
+
+            {/* Logout Disconnecting Overlay */}
+            {isLoggingOut && (
+                <div className="fixed inset-0 z-[100] bg-[#050b14]/95 backdrop-blur-md flex flex-col items-center justify-center font-mono">
+                    <div className="p-8 rounded-2xl border border-blue-500/30 bg-blue-950/20 max-w-sm w-full text-center flex flex-col items-center shadow-[0_0_50px_rgba(59,130,246,0.15)]">
+                        <div className="w-10 h-10 rounded-full border-2 border-blue-500/20 border-t-blue-500 animate-spin mb-4" />
+                        <h3 className="text-white text-sm font-bold tracking-widest uppercase mb-1">CLOSING TERMINAL</h3>
+                        <p className="text-blue-400/60 text-xs">Encrypting executive session & disconnecting...</p>
+                    </div>
+                </div>
+            )}
 
             {/* Top Navigation Bar */}
             <div className="w-full h-16 border-b border-white/5 bg-white/5 backdrop-blur-md flex items-center justify-between px-6 z-20">
