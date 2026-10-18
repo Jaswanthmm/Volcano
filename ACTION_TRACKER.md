@@ -168,8 +168,8 @@ This tracker monitors all tasks required to transition Volcano from demonstratio
   - **Target:** Google Cloud Secret Manager.
   - **Action:** Store `volcano-database-url` (Supabase pooler URI), `volcano-gemini-api-key`, `volcano-jwt-secret`, and `volcano-admin-key`. Grant Secret Accessor role to Cloud Run compute service account.
 
-- [ ] **`PROD-03`**: **Build & Deploy Volcano Backend to Cloud Run**
-  - **Target:** Cloud Run Service `volcano-backend`.
+- [x] **`PROD-03`**: **Build & Deploy Volcano Backend to Cloud Run**
+  - **Target:** Cloud Run Service `volcano-backend` (`https://volcano-backend-75852057188.europe-north2.run.app`).
   - **Action:** Run `gcloud builds submit` on `backend/` and deploy container with `--no-cpu-throttling`, 1Gi RAM, port 8080, and bound secrets. Verify `GET /healthz` returns `200 OK`.
 
 - [ ] **`PROD-04`**: **Build & Deploy Volcano Frontend to Cloud Run**

@@ -12,7 +12,7 @@ COPY package*.json ./
 RUN npm ci --no-audit --prefer-offline
 
 COPY . .
-ARG VITE_API_URL
+ARG VITE_API_URL=https://volcano-backend-75852057188.europe-north2.run.app
 ENV VITE_API_URL=$VITE_API_URL
 RUN npm run build
 
