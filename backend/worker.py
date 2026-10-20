@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 # Ensure backend directory is in path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-load_dotenv()
+load_dotenv(override=True)
 
 def sanitize_user_feedback(raw_reason: str) -> str:
     """

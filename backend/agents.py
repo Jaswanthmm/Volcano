@@ -7,7 +7,9 @@ from google.genai.types import Tool, GenerateContentConfig, GoogleSearch
 from langsmith import wrappers
 from dotenv import load_dotenv
 
-load_dotenv()
+DOTENV_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env')
+load_dotenv(DOTENV_PATH, override=True)
+load_dotenv(override=True)
 
 # Initialize Gemini Client Lazy Loaded
 # client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
@@ -71,7 +73,7 @@ def generate_content_with_retry(client, contents, config, model=None, max_retrie
     Surges in traffic gracefully queue and retry rather than failing with unhandled exceptions.
     """
     if model is None:
-        model = os.getenv('GEMINI_MODEL', 'gemini-3.8-flash')
+        model = os.getenv('GEMINI_MODEL', 'gemini-3.5-flash-lite')
 
     backoff = initial_backoff
     last_err = None
@@ -93,11 +95,21 @@ def generate_content_with_retry(client, contents, config, model=None, max_retrie
                 # Add jitter (+/- 25%) to prevent thundering herd
                 jitter = random.uniform(0.75, 1.25)
                 sleep_secs = backoff * jitter
-                warning_msg = f"Gemini API rate limit/transient error ({e}). Backing off for {sleep_secs:.2f}s (attempt {attempt}/{max_retries})..."
-                if log:
-                    log.add("RETRY", warning_msg)
-                print(f"[agents] {warning_msg}")
-                time.sleep(sleep_secs)
+                err_summary = str(e)[:160].replace('\n', ' ')
+                warning_msg = f"Gemini API rate limit/transient error ({err_summary}). Backing off for {sleep_secs:.2f}s (attempt {attempt}/{max_retries})..."
+                try:
+                    if log:
+                        log.add("RETRY", warning_msg)
+                except Exception:
+                    pass
+                try:
+                    print(f"[agents] {warning_msg}")
+                except Exception:
+                    pass
+                try:
+                    time.sleep(sleep_secs)
+                except Exception:
+                    pass
                 backoff *= 2.0
             else:
                 raise e
@@ -115,6 +127,7 @@ def run_super_agent(title, content, company_name, recent_ideas, log):
     
     try:
         # LAZY LOAD CLIENT
+        load_dotenv(DOTENV_PATH, override=True)
         api_key = os.getenv("GEMINI_API_KEY")
         # If the API key is missing from environment variables, fail fast to avoid crashes
         if not api_key:
