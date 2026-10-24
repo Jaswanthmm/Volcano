@@ -5,6 +5,8 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import LandingPage from './pages/LandingPage';
 import AlienLogin from './pages/AlienLogin';
 import BoardroomLogin from './pages/BoardroomLogin';
+import AlienForgotPassword from './pages/AlienForgotPassword';
+import BoardroomForgotPassword from './pages/BoardroomForgotPassword';
 import AlienDashboard from './pages/AlienDashboard';
 import BoardroomDashboard from './pages/BoardroomDashboard';
 import ThinkingEngine from './pages/ThinkingEngine';
@@ -30,6 +32,11 @@ function App() {
           {/* Supporting both shark and titan routes for backward compatibility/new naming */}
           <Route path="/login/boardroom" element={<BoardroomLogin />} />
           <Route path="/login/titan" element={<BoardroomLogin />} />
+
+          {/* Password Recovery Routes */}
+          <Route path="/forgot-password/alien" element={<AlienForgotPassword />} />
+          <Route path="/forgot-password/boardroom" element={<BoardroomForgotPassword />} />
+          <Route path="/forgot-password/titan" element={<BoardroomForgotPassword />} />
 
           {/* Protected Dashboard Routes (FE-03) */}
           <Route 

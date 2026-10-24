@@ -74,3 +74,20 @@ class PipelineLog(db.Model):
         db.Index('idx_pipeline_log_idea_id', 'idea_id'),
     )
 
+class OtpVerification(db.Model):
+    __tablename__ = 'otp_verifications'
+    id = db.Column(db.Integer, primary_key=True)
+    target = db.Column(db.String(120), nullable=False)  # Normalized email or phone
+    target_type = db.Column(db.String(20), nullable=False)  # 'email' or 'phone'
+    channel = db.Column(db.String(20), default='email')  # 'email', 'whatsapp', 'sms'
+    otp_code = db.Column(db.String(10), nullable=False)
+    purpose = db.Column(db.String(50), default='registration')  # 'alien_registration', 'boardroom_registration'
+    expires_at = db.Column(db.DateTime, nullable=False)
+    attempts = db.Column(db.Integer, default=0)
+    is_verified = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    __table_args__ = (
+        db.Index('idx_otp_target_purpose', 'target', 'purpose'),
+    )
+

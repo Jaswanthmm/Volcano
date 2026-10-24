@@ -54,7 +54,7 @@ const LandingPage = () => {
     if (!logoutNotification) return;
 
     const startTime = Date.now();
-    const duration = 5000;
+    const duration = 2000;
 
     const interval = setInterval(() => {
       const elapsed = Date.now() - startTime;
@@ -257,22 +257,19 @@ const LandingPage = () => {
       {/* --- LOGOUT NOTIFICATION TOAST --- */}
       {logoutNotification && (
         <div className="fixed top-24 left-1/2 -translate-x-1/2 z-50 max-w-lg w-[92%] transition-all">
-          <div className={`relative overflow-hidden rounded-xl p-4 border backdrop-blur-xl shadow-2xl ${
-            logoutNotification.role === 'alien'
-              ? 'bg-black/95 border-green-500/40 text-green-300 shadow-[0_10px_40px_rgba(34,197,94,0.25)]'
-              : 'bg-[#050b14]/95 border-blue-500/40 text-blue-300 shadow-[0_10px_40px_rgba(59,130,246,0.25)]'
-          }`}>
+          <div className={`relative overflow-hidden rounded-xl p-4 border backdrop-blur-xl shadow-2xl ${logoutNotification.role === 'alien'
+            ? 'bg-black/95 border-green-500/40 text-green-300 shadow-[0_10px_40px_rgba(34,197,94,0.25)]'
+            : 'bg-[#050b14]/95 border-blue-500/40 text-blue-300 shadow-[0_10px_40px_rgba(59,130,246,0.25)]'
+            }`}>
             <div className="flex items-start gap-3">
-              <div className={`p-2 rounded-lg shrink-0 mt-0.5 ${
-                logoutNotification.role === 'alien' ? 'bg-green-500/20 text-green-400' : 'bg-blue-500/20 text-blue-400'
-              }`}>
+              <div className={`p-2 rounded-lg shrink-0 mt-0.5 ${logoutNotification.role === 'alien' ? 'bg-green-500/20 text-green-400' : 'bg-blue-500/20 text-blue-400'
+                }`}>
                 {logoutNotification.role === 'alien' ? <Radio size={18} /> : <ShieldCheck size={18} />}
               </div>
               <div className="flex-1 min-w-0 pr-2">
                 <div className="flex items-center gap-2 mb-1">
-                  <span className={`inline-block w-2 h-2 rounded-full ${
-                    logoutNotification.role === 'alien' ? 'bg-green-500 animate-pulse' : 'bg-blue-500 animate-pulse'
-                  }`} />
+                  <span className={`inline-block w-2 h-2 rounded-full ${logoutNotification.role === 'alien' ? 'bg-green-500 animate-pulse' : 'bg-blue-500 animate-pulse'
+                    }`} />
                   <h4 className="text-xs font-bold uppercase tracking-widest font-mono text-white">
                     {logoutNotification.title}
                   </h4>
@@ -291,9 +288,8 @@ const LandingPage = () => {
             </div>
             {/* Auto-dismiss progress countdown line */}
             <div
-              className={`absolute bottom-0 left-0 h-0.5 transition-all ease-linear ${
-                logoutNotification.role === 'alien' ? 'bg-green-500' : 'bg-blue-500'
-              }`}
+              className={`absolute bottom-0 left-0 h-0.5 transition-all ease-linear ${logoutNotification.role === 'alien' ? 'bg-green-500' : 'bg-blue-500'
+                }`}
               style={{ width: `${progress}%` }}
             />
           </div>
@@ -374,7 +370,8 @@ const LandingPage = () => {
                 <DollarSign size={32} />
               </div>
               <h4 className="text-lg font-bold mb-2">4. Real Value</h4>
-              <p className="text-sm text-gray-500">The company valuate the solution. Your value grows.</p>
+              <p className="text-sm text-gray-500">Company valuate the solution.
+                Your value grows.</p>
             </div>
           </div>
         </div>
@@ -393,15 +390,15 @@ const LandingPage = () => {
             <ul className="space-y-4 mb-8 text-gray-400">
               <li className="flex items-center gap-3">
                 <CheckCircle2 size={16} className="text-green-500" />
-                <span>Zero corporate politics. Just value.</span>
+                <span>Place for your intelligence.</span>
               </li>
               <li className="flex items-center gap-3">
                 <CheckCircle2 size={16} className="text-green-500" />
-                <span>Anonymous contribution.</span>
+                <span>Make contribution.</span>
               </li>
               <li className="flex items-center gap-3">
                 <CheckCircle2 size={16} className="text-green-500" />
-                <span>Create your Value</span>
+                <span>Create your own Value</span>
               </li>
             </ul>
             <Link to="/login/alien" className="group inline-flex w-full items-center justify-center gap-2 py-4 text-center bg-transparent border border-white/10 text-white font-bold uppercase tracking-widest text-xs rounded hover:border-green-500 hover:text-green-500 transition-all">
@@ -426,7 +423,7 @@ const LandingPage = () => {
               </li>
               <li className="flex items-center gap-3">
                 <CheckCircle2 size={16} className="text-blue-500" />
-                <span>Build real value for your company.</span>
+                <span>Bring value to your company.</span>
               </li>
             </ul>
             <Link to="/login/boardroom" className="group inline-flex w-full items-center justify-center gap-2 py-4 text-center bg-transparent border border-white/10 text-white font-bold uppercase tracking-widest text-xs rounded hover:border-blue-500 hover:text-blue-500 transition-all">

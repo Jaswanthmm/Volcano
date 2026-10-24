@@ -84,7 +84,7 @@ const BoardroomProfile = () => {
                         <h1 className="text-5xl font-black text-white tracking-tight uppercase mb-2">{company.name}</h1>
                         <div className="flex items-center gap-6 text-sm text-green-500/60 uppercase tracking-widest mb-6">
                             {company.website && (
-                                <a href={company.website} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:text-green-400 transition-colors">
+                                <a href={company.website.startsWith('http') ? company.website : `https://${company.website}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:text-green-400 transition-colors">
                                     <Globe size={14} /> Corporate Net
                                 </a>
                             )}

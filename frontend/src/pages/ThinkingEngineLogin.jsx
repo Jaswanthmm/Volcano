@@ -87,7 +87,7 @@ const ThinkingEngineLogin = () => {
                                 type="password"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
-                                className="w-full bg-black/50 border border-purple-900/30 rounded-lg py-3 pl-12 pr-4 text-purple-200 placeholder-purple-900/50 focus:outline-none focus:border-purple-500 focus:shadow-[0_0_15px_rgba(168,85,247,0.3)] transition-all font-bold tracking-widest text-center"
+                                className="w-full bg-black/50 border border-purple-900/30 rounded-lg py-3 pl-12 pr-4 text-purple-200 placeholder-purple-400/60 focus:outline-none focus:border-purple-500 focus:shadow-[0_0_15px_rgba(168,85,247,0.3)] transition-all font-bold tracking-widest text-center"
                                 placeholder="••••••••"
                                 autoFocus
                             />
